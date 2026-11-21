@@ -1,0 +1,34 @@
+﻿services:
+  xiaozhi-sandbox:
+    build: .
+    container_name: xiaozhi-docker-sandbox
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    env_file:
+      - .env
+    volumes:
+      - ./workspace:/app/workspace:rw
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: xiaozhi-homeassistant
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    environment:
+      - TZ=Europe/Moscow
+    volumes:
+      - ./ha-config:/config
+
+  xiaozhi-vpn-proxy:
+    image: ghcr.io/sagernet/sing-box:latest
+    container_name: xiaozhi-vpn-proxy
+    profiles: ["vpn"]
+    ports:
+      - "127.0.0.1:1080:1080"
+    volumes:
+      - ./vpn-config:/etc/sing-box:ro
+    command: -D /var/lib/sing-box -C /etc/sing-box run

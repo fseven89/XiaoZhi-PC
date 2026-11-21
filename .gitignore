@@ -3,6 +3,8 @@
 *.pem
 __pycache__/
 venv/
-data/
-
 .vscode/
+workspace/
+vpn-config/
+ha-config/
+state.json

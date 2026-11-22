@@ -30,13 +30,23 @@ def _save_state(state: dict):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, indent=2)
 
+
+def _redact_secrets(text: str) -> str:
+    """Вырезает любые реальные значения секретов из .env перед выводом или записью в лог."""
+    out = str(text)
+    for var in ("LLM_API_KEY", "HA_TOKEN", "MCP_ENDPOINT", "PHONE_NTFY_TOPIC", "TELEGRAM_BOT_TOKEN"):
+        val = os.getenv(var, "").strip()
+        if val and len(val) > 6:
+            out = out.replace(val, "[СКРЫТО]")
+    return out
+
 def _log_event(tool_name: str, args: dict, result: str):
     entry = {
         "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
         "mode": _load_state().get("mode", "companion"),
         "tool": tool_name,
         "args": args,
-        "result": str(result)[:1000]
+        "result": _redact_secrets(str(result))[:1000]
     }
     try:
         with open(AUDIT_FILE, "a", encoding="utf-8") as f:

@@ -34,3 +34,11 @@
       - ./vpn-config:/etc/sing-box:ro
     command: -D /var/lib/sing-box -C /etc/sing-box run
 
+
+  xiaozhi-idf-builder:
+    image: espressif/idf:release-v5.3
+    container_name: xiaozhi-idf-builder
+    profiles: ["firmware"]
+    working_dir: /project
+    volumes:
+      - ./xiaozhi-esp32:/project

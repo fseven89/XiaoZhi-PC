@@ -66,23 +66,23 @@ def _create_auto_backup(reason: str = "auto") -> str:
 
 @mcp.tool()
 def get_johnny_audit_log(limit: int = 10) -> str:
-    """Р вЂ™Р С•Р В·Р Р†РЎР‚Р В°РЎвЂ°Р В°Р ВµРЎвЂљ Р С—Р С•РЎРѓР В»Р ВµР Т‘Р Р…Р С‘Р Вµ Р В·Р В°Р С—Р С‘РЎРѓР С‘ Р С‘Р В· Р В¶РЎС“РЎР‚Р Р…Р В°Р В»Р В° Р Т‘Р ВµР в„–РЎРѓРЎвЂљР Р†Р С‘Р в„– Р вЂќР В¶Р С•Р Р…Р Р…Р С‘."""
+    """Р В РІР‚в„ўР В РЎвЂўР В Р’В·Р В Р вЂ Р РЋР вЂљР В Р’В°Р РЋРІР‚В°Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂ”Р В РЎвЂўР РЋР С“Р В Р’В»Р В Р’ВµР В РўвЂР В Р вЂ¦Р В РЎвЂР В Р’Вµ Р В Р’В·Р В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В РЎвЂ Р В РЎвЂР В Р’В· Р В Р’В¶Р РЋРЎвЂњР РЋР вЂљР В Р вЂ¦Р В Р’В°Р В Р’В»Р В Р’В° Р В РўвЂР В Р’ВµР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂР В РІвЂћвЂ“ Р В РІР‚СњР В Р’В¶Р В РЎвЂўР В Р вЂ¦Р В Р вЂ¦Р В РЎвЂ."""
     if not os.path.exists(AUDIT_FILE):
-        return "Р вЂ“РЎС“РЎР‚Р Р…Р В°Р В» Р Т‘Р ВµР в„–РЎРѓРЎвЂљР Р†Р С‘Р в„– Р С—Р С•Р С”Р В° Р С—РЎС“РЎРѓРЎвЂљ."
+        return "Р В РІР‚вЂњР РЋРЎвЂњР РЋР вЂљР В Р вЂ¦Р В Р’В°Р В Р’В» Р В РўвЂР В Р’ВµР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂР В РІвЂћвЂ“ Р В РЎвЂ”Р В РЎвЂўР В РЎвЂќР В Р’В° Р В РЎвЂ”Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™."
     with open(AUDIT_FILE, "r", encoding="utf-8") as f:
         lines = f.readlines()[-limit:]
     return "\n".join(f"[{json.loads(l)['timestamp']}] ({json.loads(l)['mode']}) {json.loads(l)['tool']} -> {json.loads(l)['result'][:120]}" for l in lines)
 
 @mcp.tool()
 def rollback_last_backup() -> str:
-    """Р вЂ™Р С•РЎРѓРЎРѓРЎвЂљР В°Р Р…Р В°Р Р†Р В»Р С‘Р Р†Р В°Р ВµРЎвЂљ РЎвЂћР В°Р в„–Р В»РЎвЂ№ Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В° Р С‘Р В· Р С—Р С•РЎРѓР В»Р ВµР Т‘Р Р…Р ВµР С–Р С• РЎР‚Р ВµР В·Р ВµРЎР‚Р Р†Р Р…Р С•Р С–Р С• Р В°РЎР‚РЎвЂ¦Р С‘Р Р†Р В°."""
+    """Р В РІР‚в„ўР В РЎвЂўР РЋР С“Р РЋР С“Р РЋРІР‚С™Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р вЂ Р В Р’В»Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р РЋРІР‚в„– Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР В Р’ВµР В РЎвЂќР РЋРІР‚С™Р В Р’В° Р В РЎвЂР В Р’В· Р В РЎвЂ”Р В РЎвЂўР РЋР С“Р В Р’В»Р В Р’ВµР В РўвЂР В Р вЂ¦Р В Р’ВµР В РЎвЂ“Р В РЎвЂў Р РЋР вЂљР В Р’ВµР В Р’В·Р В Р’ВµР РЋР вЂљР В Р вЂ Р В Р вЂ¦Р В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В Р’В°Р РЋР вЂљР РЋРІР‚В¦Р В РЎвЂР В Р вЂ Р В Р’В°."""
     all_bkp = sorted(glob.glob(os.path.join(BACKUPS_DIR, "backup_*.zip")))
     if not all_bkp:
-        return "Р В Р ВµР В·Р ВµРЎР‚Р Р†Р Р…РЎвЂ№Р Вµ Р С”Р С•Р С—Р С‘Р С‘ Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…РЎвЂ№."
+        return "Р В Р’В Р В Р’ВµР В Р’В·Р В Р’ВµР РЋР вЂљР В Р вЂ Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В РЎвЂќР В РЎвЂўР В РЎвЂ”Р В РЎвЂР В РЎвЂ Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦Р РЋРІР‚в„–."
     latest = all_bkp[-1]
     with zipfile.ZipFile(latest, "r") as zf:
         zf.extractall(BASE_DIR)
-    res = f"Р РЋР С‘РЎРѓРЎвЂљР ВµР СР В° Р С•РЎвЂљР С”Р В°РЎвЂЎР ВµР Р…Р В° Р С” Р С”Р С•Р С—Р С‘Р С‘: {os.path.basename(latest)}"
+    res = f"Р В Р Р‹Р В РЎвЂР РЋР С“Р РЋРІР‚С™Р В Р’ВµР В РЎВР В Р’В° Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР В Р’В°Р РЋРІР‚РЋР В Р’ВµР В Р вЂ¦Р В Р’В° Р В РЎвЂќ Р В РЎвЂќР В РЎвЂўР В РЎвЂ”Р В РЎвЂР В РЎвЂ: {os.path.basename(latest)}"
     _log_event("rollback_last_backup", {}, res)
     return res
 
@@ -97,31 +97,31 @@ def _is_command_safe(cmd: str) -> tuple[bool, str]:
     cmd_lower = cmd.lower()
     for pattern in FORBIDDEN_PATTERNS:
         if re.search(pattern, cmd_lower):
-            return False, f"Р вЂ”Р В°Р В±Р В»Р С•Р С”Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С• Р С—Р С•Р В»Р С‘РЎвЂљР С‘Р С”Р С•Р в„– Р В±Р ВµР В·Р С•Р С—Р В°РЎРѓР Р…Р С•РЎРѓРЎвЂљР С‘: {pattern}"
+            return False, f"Р В РІР‚вЂќР В Р’В°Р В Р’В±Р В Р’В»Р В РЎвЂўР В РЎвЂќР В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В РЎвЂР РЋРІР‚С™Р В РЎвЂР В РЎвЂќР В РЎвЂўР В РІвЂћвЂ“ Р В Р’В±Р В Р’ВµР В Р’В·Р В РЎвЂўР В РЎвЂ”Р В Р’В°Р РЋР С“Р В Р вЂ¦Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂ: {pattern}"
     return True, "OK"
 
 MODES_CONFIG = {
-    "combat": {"name": "Р вЂР С•Р ВµР Р†Р С•Р в„– / Р СњР ВµРЎвЂљРЎР‚Р В°Р Р…Р Р…Р ВµРЎР‚", "rules": "Р РЋРЎС“РЎвЂ¦Р С•, РЎвЂљР ВµРЎвЂ¦Р Р…Р С‘РЎвЂЎР ВµРЎРѓР С”Р С‘ РЎвЂљР С•РЎвЂЎР Р…Р С•, Р В±Р ВµР В· Р Р†Р С•Р Т‘РЎвЂ№."},
-    "companion": {"name": "Р СњР В°Р С—Р В°РЎР‚Р Р…Р С‘Р С” / Р ВР Р…РЎвЂћР С•", "rules": "Р ТђР В°РЎР‚Р С‘Р В·Р СР В° Р вЂќР В¶Р С•Р Р…Р Р…Р С‘ Р РЋР С‘Р В»РЎРЉР Р†Р ВµРЎР‚РЎвЂ¦Р ВµР Р…Р Т‘Р В°, Р В»Р ВµР С–Р С”Р С‘Р в„– РЎРѓР В°РЎР‚Р С”Р В°Р В·Р С, Р Р…Р С• Р С—Р С• Р Т‘Р ВµР В»РЎС“."},
-    "entertainment": {"name": "Р СњР В°Р в„–РЎвЂљ-Р РЋР С‘РЎвЂљР С‘ / Р РЋР В°Р СРЎС“РЎР‚Р В°Р в„–", "rules": "Р В Р В°Р В·Р Р†Р В»Р ВµР С”Р В°РЎвЂљР ВµР В»РЎРЉР Р…РЎвЂ№Р в„– РЎР‚Р ВµР В¶Р С‘Р С, РЎв‚¬РЎС“РЎвЂљР С”Р С‘, Р С”Р Р†Р ВµРЎРѓРЎвЂљРЎвЂ№ Р С—Р С• Р С”Р С‘Р В±Р ВµРЎР‚Р С—Р В°Р Р…Р С”РЎС“."}
+    "combat": {"name": "Р В РІР‚ВР В РЎвЂўР В Р’ВµР В Р вЂ Р В РЎвЂўР В РІвЂћвЂ“ / Р В РЎСљР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р вЂ¦Р В Р’ВµР РЋР вЂљ", "rules": "Р В Р Р‹Р РЋРЎвЂњР РЋРІР‚В¦Р В РЎвЂў, Р РЋРІР‚С™Р В Р’ВµР РЋРІР‚В¦Р В Р вЂ¦Р В РЎвЂР РЋРІР‚РЋР В Р’ВµР РЋР С“Р В РЎвЂќР В РЎвЂ Р РЋРІР‚С™Р В РЎвЂўР РЋРІР‚РЋР В Р вЂ¦Р В РЎвЂў, Р В Р’В±Р В Р’ВµР В Р’В· Р В Р вЂ Р В РЎвЂўР В РўвЂР РЋРІР‚в„–."},
+    "companion": {"name": "Р В РЎСљР В Р’В°Р В РЎвЂ”Р В Р’В°Р РЋР вЂљР В Р вЂ¦Р В РЎвЂР В РЎвЂќ / Р В Р’ВР В Р вЂ¦Р РЋРІР‚С›Р В РЎвЂў", "rules": "Р В РўС’Р В Р’В°Р РЋР вЂљР В РЎвЂР В Р’В·Р В РЎВР В Р’В° Р В РІР‚СњР В Р’В¶Р В РЎвЂўР В Р вЂ¦Р В Р вЂ¦Р В РЎвЂ Р В Р Р‹Р В РЎвЂР В Р’В»Р РЋР Р‰Р В Р вЂ Р В Р’ВµР РЋР вЂљР РЋРІР‚В¦Р В Р’ВµР В Р вЂ¦Р В РўвЂР В Р’В°, Р В Р’В»Р В Р’ВµР В РЎвЂ“Р В РЎвЂќР В РЎвЂР В РІвЂћвЂ“ Р РЋР С“Р В Р’В°Р РЋР вЂљР В РЎвЂќР В Р’В°Р В Р’В·Р В РЎВ, Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂ”Р В РЎвЂў Р В РўвЂР В Р’ВµР В Р’В»Р РЋРЎвЂњ."},
+    "entertainment": {"name": "Р В РЎСљР В Р’В°Р В РІвЂћвЂ“Р РЋРІР‚С™-Р В Р Р‹Р В РЎвЂР РЋРІР‚С™Р В РЎвЂ / Р В Р Р‹Р В Р’В°Р В РЎВР РЋРЎвЂњР РЋР вЂљР В Р’В°Р В РІвЂћвЂ“", "rules": "Р В Р’В Р В Р’В°Р В Р’В·Р В Р вЂ Р В Р’В»Р В Р’ВµР В РЎвЂќР В Р’В°Р РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВ, Р РЋРІвЂљВ¬Р РЋРЎвЂњР РЋРІР‚С™Р В РЎвЂќР В РЎвЂ, Р В РЎвЂќР В Р вЂ Р В Р’ВµР РЋР С“Р РЋРІР‚С™Р РЋРІР‚в„– Р В РЎвЂ”Р В РЎвЂў Р В РЎвЂќР В РЎвЂР В Р’В±Р В Р’ВµР РЋР вЂљР В РЎвЂ”Р В Р’В°Р В Р вЂ¦Р В РЎвЂќР РЋРЎвЂњ."}
 }
 
 @mcp.tool()
 def switch_assistant_mode(mode: str) -> str:
-    """Р СџР ВµРЎР‚Р ВµР С”Р В»РЎР‹РЎвЂЎР В°Р ВµРЎвЂљ РЎР‚Р ВµР В¶Р С‘Р С РЎР‚Р В°Р В±Р С•РЎвЂљРЎвЂ№: combat, companion, entertainment."""
+    """Р В РЎСџР В Р’ВµР РЋР вЂљР В Р’ВµР В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВ Р РЋР вЂљР В Р’В°Р В Р’В±Р В РЎвЂўР РЋРІР‚С™Р РЋРІР‚в„–: combat, companion, entertainment."""
     mode = mode.lower().strip()
     if mode not in MODES_CONFIG:
-        return "Р вЂќР С•РЎРѓРЎвЂљРЎС“Р С—Р Р…РЎвЂ№ РЎР‚Р ВµР В¶Р С‘Р СРЎвЂ№: combat, companion, entertainment."
+        return "Р В РІР‚СњР В РЎвЂўР РЋР С“Р РЋРІР‚С™Р РЋРЎвЂњР В РЎвЂ”Р В Р вЂ¦Р РЋРІР‚в„– Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВР РЋРІР‚в„–: combat, companion, entertainment."
     state = _load_state()
     state["mode"] = mode
     _save_state(state)
-    res = f"Р С’Р С”РЎвЂљР С‘Р Р†Р С‘РЎР‚Р С•Р Р†Р В°Р Р… РЎР‚Р ВµР В¶Р С‘Р С: {MODES_CONFIG[mode]['name']}."
+    res = f"Р В РЎвЂ™Р В РЎвЂќР РЋРІР‚С™Р В РЎвЂР В Р вЂ Р В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р В Р вЂ¦ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВ: {MODES_CONFIG[mode]['name']}."
     _log_event("switch_assistant_mode", {"mode": mode}, res)
     return res
 
 @mcp.tool()
 def run_safe_powershell(command: str) -> str:
-    """Р вЂ™РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р В±Р ВµР В·Р С•Р С—Р В°РЎРѓР Р…РЎС“РЎР‹ Р С”Р С•Р СР В°Р Р…Р Т‘РЎС“ PowerShell РЎРѓ Р С—РЎР‚Р ВµР Т‘Р Р†Р В°РЎР‚Р С‘РЎвЂљР ВµР В»РЎРЉР Р…РЎвЂ№Р С Р В°Р Р†РЎвЂљР С•-Р В±РЎРЊР С”Р В°Р С—Р С•Р С."""
+    """Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р В Р’В±Р В Р’ВµР В Р’В·Р В РЎвЂўР В РЎвЂ”Р В Р’В°Р РЋР С“Р В Р вЂ¦Р РЋРЎвЂњР РЋР вЂ№ Р В РЎвЂќР В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РўвЂР РЋРЎвЂњ PowerShell Р РЋР С“ Р В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р вЂ Р В Р’В°Р РЋР вЂљР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В РЎВ Р В Р’В°Р В Р вЂ Р РЋРІР‚С™Р В РЎвЂў-Р В Р’В±Р РЋР РЉР В РЎвЂќР В Р’В°Р В РЎвЂ”Р В РЎвЂўР В РЎВ."""
     is_safe, reason = _is_command_safe(command)
     if not is_safe:
         _log_event("run_safe_powershell_BLOCKED", {"command": command}, reason)
@@ -130,27 +130,27 @@ def run_safe_powershell(command: str) -> str:
     try:
         result = subprocess.run(["powershell", "-NoProfile", "-Command", command], cwd=WORKSPACE_DIR, capture_output=True, text=True, encoding="cp866", timeout=20)
         out = result.stdout.strip() if result.returncode == 0 else result.stderr.strip()
-        res = out if out else "Р С™Р С•Р СР В°Р Р…Р Т‘Р В° Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…Р ВµР Р…Р В°."
+        res = out if out else "Р В РЎв„ўР В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РўвЂР В Р’В° Р В Р вЂ Р РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В Р’В°."
     except Exception as e:
-        res = f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В°: {str(e)}"
+        res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В°: {str(e)}"
     _log_event("run_safe_powershell", {"command": command, "backup": bkp_name}, res)
     return res
 
 @mcp.tool()
 def get_pc_telemetry() -> str:
-    """Р вЂ™Р С•Р В·Р Р†РЎР‚Р В°РЎвЂ°Р В°Р ВµРЎвЂљ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”РЎС“ CPU, RAM Р С‘ РЎРѓР Р†Р С•Р В±Р С•Р Т‘Р Р…Р С•Р Вµ Р СР ВµРЎРѓРЎвЂљР С• Р Р…Р В° Р Т‘Р С‘РЎРѓР С”Р Вµ C."""
+    """Р В РІР‚в„ўР В РЎвЂўР В Р’В·Р В Р вЂ Р РЋР вЂљР В Р’В°Р РЋРІР‚В°Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р В Р’В·Р В Р’В°Р В РЎвЂ“Р РЋР вЂљР РЋРЎвЂњР В Р’В·Р В РЎвЂќР РЋРЎвЂњ CPU, RAM Р В РЎвЂ Р РЋР С“Р В Р вЂ Р В РЎвЂўР В Р’В±Р В РЎвЂўР В РўвЂР В Р вЂ¦Р В РЎвЂўР В Р’Вµ Р В РЎВР В Р’ВµР РЋР С“Р РЋРІР‚С™Р В РЎвЂў Р В Р вЂ¦Р В Р’В° Р В РўвЂР В РЎвЂР РЋР С“Р В РЎвЂќР В Р’Вµ C."""
     cpu = psutil.cpu_percent(interval=0.5)
     ram = psutil.virtual_memory()
     disk = psutil.disk_usage("C:\\")
-    res = f"CPU: {cpu}% | RAM: {ram.percent}% | Р вЂќР С‘РЎРѓР С” C РЎРѓР Р†Р С•Р В±Р С•Р Т‘Р Р…Р С•: {round(disk.free / 1024**3, 1)} Р вЂњР вЂ"
+    res = f"CPU: {cpu}% | RAM: {ram.percent}% | Р В РІР‚СњР В РЎвЂР РЋР С“Р В РЎвЂќ C Р РЋР С“Р В Р вЂ Р В РЎвЂўР В Р’В±Р В РЎвЂўР В РўвЂР В Р вЂ¦Р В РЎвЂў: {round(disk.free / 1024**3, 1)} Р В РІР‚СљР В РІР‚В"
     _log_event("get_pc_telemetry", {}, res)
     return res
 
 @mcp.tool()
 def manage_docker(action: str, container_name: str = "") -> str:
-    """Р Р€Р С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµРЎвЂљ Docker: ps, start, stop, logs."""
+    """Р В Р в‚¬Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Docker: ps, start, stop, logs."""
     if container_name and not re.match(r"^[a-zA-Z0-9_.-]+$", container_name):
-        return "Р СњР ВµР Т‘Р С•Р С—РЎС“РЎРѓРЎвЂљР С‘Р СР С•Р Вµ Р С‘Р СРЎРЏ Р С”Р С•Р Р…РЎвЂљР ВµР в„–Р Р…Р ВµРЎР‚Р В°."
+        return "Р В РЎСљР В Р’ВµР В РўвЂР В РЎвЂўР В РЎвЂ”Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р В РЎвЂР В РЎВР В РЎвЂўР В Р’Вµ Р В РЎвЂР В РЎВР РЋР РЏ Р В РЎвЂќР В РЎвЂўР В Р вЂ¦Р РЋРІР‚С™Р В Р’ВµР В РІвЂћвЂ“Р В Р вЂ¦Р В Р’ВµР РЋР вЂљР В Р’В°."
     cmd_map = {
         "ps": "docker ps -a --format 'table {{.Names}}\t{{.Status}}'",
         "start": f"docker start {container_name}",
@@ -158,33 +158,33 @@ def manage_docker(action: str, container_name: str = "") -> str:
         "logs": f"docker logs --tail 25 {container_name}"
     }
     if action not in cmd_map:
-        return "Р вЂќР С•РЎРѓРЎвЂљРЎС“Р С—Р Р…РЎвЂ№: ps, start, stop, logs."
+        return "Р В РІР‚СњР В РЎвЂўР РЋР С“Р РЋРІР‚С™Р РЋРЎвЂњР В РЎвЂ”Р В Р вЂ¦Р РЋРІР‚в„–: ps, start, stop, logs."
     return run_safe_powershell(cmd_map[action])
 
 @mcp.tool()
 def open_in_vscode(target_path: str = WORKSPACE_DIR) -> str:
-    """Р С›РЎвЂљР С”РЎР‚РЎвЂ№Р Р†Р В°Р ВµРЎвЂљ Р С—Р В°Р С—Р С”РЎС“ Р С‘Р В»Р С‘ РЎвЂћР В°Р в„–Р В» Р Р† VS Code (РЎвЂљР С•Р В»РЎРЉР С”Р С• Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ C:\\XiaoZhi-PC)."""
+    """Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂ”Р В Р’В°Р В РЎвЂ”Р В РЎвЂќР РЋРЎвЂњ Р В РЎвЂР В Р’В»Р В РЎвЂ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р В Р вЂ  VS Code (Р РЋРІР‚С™Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В РЎвЂќР В РЎвЂў Р В Р вЂ Р В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР вЂљР В РЎвЂ C:\\XiaoZhi-PC)."""
     abs_path = os.path.abspath(target_path)
     if not abs_path.startswith(BASE_DIR):
-        return "Р вЂќР С•РЎРѓРЎвЂљРЎС“Р С— РЎР‚Р В°Р В·РЎР‚Р ВµРЎв‚¬Р ВµР Р… РЎвЂљР С•Р В»РЎРЉР С”Р С• Р С” C:\\XiaoZhi-PC."
+        return "Р В РІР‚СњР В РЎвЂўР РЋР С“Р РЋРІР‚С™Р РЋРЎвЂњР В РЎвЂ” Р РЋР вЂљР В Р’В°Р В Р’В·Р РЋР вЂљР В Р’ВµР РЋРІвЂљВ¬Р В Р’ВµР В Р вЂ¦ Р РЋРІР‚С™Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В РЎвЂќР В РЎвЂў Р В РЎвЂќ C:\\XiaoZhi-PC."
     subprocess.Popen(["code", abs_path], shell=True)
-    res = f"Р С›РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљР С• Р Р† VS Code: {abs_path}"
+    res = f"Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В РЎвЂў Р В Р вЂ  VS Code: {abs_path}"
     _log_event("open_in_vscode", {"target_path": abs_path}, res)
     return res
 
 @mcp.tool()
 def git_sync_project(commit_message: str = "Voice auto-sync via Johnny") -> str:
-    """Р вЂР ВµР В·Р С•Р С—Р В°РЎРѓР Р…Р С• РЎвЂћР С‘Р С”РЎРѓР С‘РЎР‚РЎС“Р ВµРЎвЂљ Р С‘ Р С•РЎвЂљР С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµРЎвЂљ РЎР‚Р В°Р В·РЎР‚Р ВµРЎв‚¬Р ВµР Р…Р Р…РЎвЂ№Р Вµ РЎвЂћР В°Р в„–Р В»РЎвЂ№ Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В° Р Р…Р В° GitHub."""
+    """Р В РІР‚ВР В Р’ВµР В Р’В·Р В РЎвЂўР В РЎвЂ”Р В Р’В°Р РЋР С“Р В Р вЂ¦Р В РЎвЂў Р РЋРІР‚С›Р В РЎвЂР В РЎвЂќР РЋР С“Р В РЎвЂР РЋР вЂљР РЋРЎвЂњР В Р’ВµР РЋРІР‚С™ Р В РЎвЂ Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р РЋР вЂљР В Р’В°Р В Р’В·Р РЋР вЂљР В Р’ВµР РЋРІвЂљВ¬Р В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р РЋРІР‚в„– Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР В Р’ВµР В РЎвЂќР РЋРІР‚С™Р В Р’В° Р В Р вЂ¦Р В Р’В° GitHub."""
     safe_msg = re.sub(r"[\"'\`;$|&]", "", commit_message).strip() or "Voice auto-sync"
     cmd = f'git -C "{BASE_DIR}" add .gitignore .env.example README.md ROADMAP.md Dockerfile docker-compose.yml mcp_pipe.py pc_agent.py; git -C "{BASE_DIR}" commit -m "{safe_msg}"; git -C "{BASE_DIR}" push -u origin main'
     return run_safe_powershell(cmd)
 
 @mcp.tool()
 def search_workspace_docs(query: str) -> str:
-    """Р ВРЎвЂ°Р ВµРЎвЂљ Р С‘Р Р…РЎвЂћР С•РЎР‚Р СР В°РЎвЂ Р С‘РЎР‹ Р С—Р С• РЎвЂљР ВµР С”РЎРѓРЎвЂљР С•Р Р†РЎвЂ№Р С РЎвЂћР В°Р в„–Р В»Р В°Р С Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ C:\\XiaoZhi-PC\\workspace."""
+    """Р В Р’ВР РЋРІР‚В°Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂР В Р вЂ¦Р РЋРІР‚С›Р В РЎвЂўР РЋР вЂљР В РЎВР В Р’В°Р РЋРІР‚В Р В РЎвЂР РЋР вЂ№ Р В РЎвЂ”Р В РЎвЂў Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В Р вЂ Р РЋРІР‚в„–Р В РЎВ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В°Р В РЎВ Р В Р вЂ Р В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР вЂљР В РЎвЂ C:\\XiaoZhi-PC\\workspace."""
     q = query.lower().strip()
     if not q:
-        return "Р Р€Р С”Р В°Р В¶Р С‘РЎвЂљР Вµ Р С—Р С•Р С‘РЎРѓР С”Р С•Р Р†РЎвЂ№Р в„– Р В·Р В°Р С—РЎР‚Р С•РЎРѓ."
+        return "Р В Р в‚¬Р В РЎвЂќР В Р’В°Р В Р’В¶Р В РЎвЂР РЋРІР‚С™Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В РЎвЂР РЋР С“Р В РЎвЂќР В РЎвЂўР В Р вЂ Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР РЋР С“."
     matches = []
     for root, _, files in os.walk(WORKSPACE_DIR):
         for fname in files:
@@ -194,19 +194,19 @@ def search_workspace_docs(query: str) -> str:
                     with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
                         for idx, line in enumerate(f, 1):
                             if q in line.lower():
-                                matches.append(f"{fname} (РЎРѓРЎвЂљРЎР‚. {idx}): {line.strip()[:120]}")
+                                matches.append(f"{fname} (Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљ. {idx}): {line.strip()[:120]}")
                 except Exception:
                     pass
-    res = "\n".join(matches[:15]) if matches else f"Р РЋР С•Р Р†Р С—Р В°Р Т‘Р ВµР Р…Р С‘Р в„– Р С—Р С• Р В·Р В°Р С—РЎР‚Р С•РЎРѓРЎС“ '{query}' Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р С•."
-    _log_event("search_workspace_docs", {"query": query}, f"Р СњР В°Р в„–Р Т‘Р ВµР Р…Р С•: {len(matches)}")
+    res = "\n".join(matches[:15]) if matches else f"Р В Р Р‹Р В РЎвЂўР В Р вЂ Р В РЎвЂ”Р В Р’В°Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР В РІвЂћвЂ“ Р В РЎвЂ”Р В РЎвЂў Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР РЋР С“Р РЋРЎвЂњ '{query}' Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂў."
+    _log_event("search_workspace_docs", {"query": query}, f"Р В РЎСљР В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂў: {len(matches)}")
     return res
 
 @mcp.tool()
 def phone_send_ntfy(message: str, attach_screenshot: bool = False) -> str:
-    """Р С›РЎвЂљР С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµРЎвЂљ РЎвЂљР ВµР С”РЎРѓРЎвЂљ Р С‘Р В»Р С‘ РЎРѓР С”РЎР‚Р С‘Р Р…РЎв‚¬Р С•РЎвЂљ РЎРЊР С”РЎР‚Р В°Р Р…Р В° Р СџР С™ Р Р…Р В° РЎвЂљР ВµР В»Р ВµРЎвЂћР С•Р Р… РЎвЂЎР ВµРЎР‚Р ВµР В· ntfy.sh."""
+    """Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋР С“Р РЋРІР‚С™ Р В РЎвЂР В Р’В»Р В РЎвЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР В РЎвЂР В Р вЂ¦Р РЋРІвЂљВ¬Р В РЎвЂўР РЋРІР‚С™ Р РЋР РЉР В РЎвЂќР РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’В° Р В РЎСџР В РЎв„ў Р В Р вЂ¦Р В Р’В° Р РЋРІР‚С™Р В Р’ВµР В Р’В»Р В Р’ВµР РЋРІР‚С›Р В РЎвЂўР В Р вЂ¦ Р РЋРІР‚РЋР В Р’ВµР РЋР вЂљР В Р’ВµР В Р’В· ntfy.sh."""
     topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
     if not topic:
-        return "Р С™Р В°Р Р…Р В°Р В» ntfy Р Р…Р Вµ Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р ВµР Р… Р Р† .env."
+        return "Р В РЎв„ўР В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В» ntfy Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В Р’ВµР В Р вЂ¦ Р В Р вЂ  .env."
     ntfy_url = "https://" + "ntfy.sh" + f"/{topic}"
     try:
         if attach_screenshot:
@@ -220,50 +220,50 @@ def phone_send_ntfy(message: str, attach_screenshot: bool = False) -> str:
                 os.remove(tmp_path)
         else:
             resp = requests.post(ntfy_url, data=message.encode("utf-8"), headers={"Title": "Johnny PC"}, timeout=10)
-        res = "Р Р€РЎРѓР С—Р ВµРЎв‚¬Р Р…Р С• Р С•РЎвЂљР С—РЎР‚Р В°Р Р†Р В»Р ВµР Р…Р С• Р Р…Р В° РЎвЂљР ВµР В»Р ВµРЎвЂћР С•Р Р… РЎвЂЎР ВµРЎР‚Р ВµР В· ntfy." if resp.ok else f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В° ntfy: {resp.status_code}"
+        res = "Р В Р в‚¬Р РЋР С“Р В РЎвЂ”Р В Р’ВµР РЋРІвЂљВ¬Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂў Р В Р вЂ¦Р В Р’В° Р РЋРІР‚С™Р В Р’ВµР В Р’В»Р В Р’ВµР РЋРІР‚С›Р В РЎвЂўР В Р вЂ¦ Р РЋРІР‚РЋР В Р’ВµР РЋР вЂљР В Р’ВµР В Р’В· ntfy." if resp.ok else f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° ntfy: {resp.status_code}"
     except Exception as e:
-        res = f"Р РЋР В±Р С•Р в„– ntfy: {str(e)}"
+        res = f"Р В Р Р‹Р В Р’В±Р В РЎвЂўР В РІвЂћвЂ“ ntfy: {str(e)}"
     _log_event("phone_send_ntfy", {"message": message, "screenshot": attach_screenshot}, res)
     return res
 
 @mcp.tool()
 def pc_get_weather(city: str = "") -> str:
-    """Р СџР С•Р В»РЎС“РЎвЂЎР В°Р ВµРЎвЂљ РЎвЂљР ВµР С”РЎС“РЎвЂ°РЎС“РЎР‹ Р С—Р С•Р С–Р С•Р Т‘РЎС“ Р В±Р ВµР В· API-Р С”Р В»РЎР‹РЎвЂЎР ВµР в„–."""
+    """Р В РЎСџР В РЎвЂўР В Р’В»Р РЋРЎвЂњР РЋРІР‚РЋР В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋРЎвЂњР РЋРІР‚В°Р РЋРЎвЂњР РЋР вЂ№ Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРЎвЂњ Р В Р’В±Р В Р’ВµР В Р’В· API-Р В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В РІвЂћвЂ“."""
     target = city.strip() if city.strip() else os.getenv("DEFAULT_CITY", "Saint-Petersburg")
-    url = "https://" + "wttr.in" + f"/{target}?format=3РІРЉВ©=ru"
+    url = "https://" + "wttr.in" + f"/{target}?format=3Р Р†Р Р‰Р’В©=ru"
     try:
         r = requests.get(url, timeout=8)
-        res = r.text.strip() if r.ok else f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С—Р С•Р С–Р С•Р Т‘РЎвЂ№: {r.status_code}"
+        res = r.text.strip() if r.ok else f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРІР‚в„–: {r.status_code}"
     except Exception as e:
-        res = f"Р РЋР В±Р С•Р в„– Р С—Р С•Р С–Р С•Р Т‘РЎвЂ№: {str(e)}"
+        res = f"Р В Р Р‹Р В Р’В±Р В РЎвЂўР В РІвЂћвЂ“ Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРІР‚в„–: {str(e)}"
     _log_event("pc_get_weather", {"city": target}, res)
     return res
 
 @mcp.tool()
 def manage_notes(action: str, text: str = "") -> str:
-    """Р Р€Р С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµРЎвЂљ Р В·Р В°Р СР ВµРЎвЂљР С”Р В°Р СР С‘: add, read, clear."""
+    """Р В Р в‚¬Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р В Р’В·Р В Р’В°Р В РЎВР В Р’ВµР РЋРІР‚С™Р В РЎвЂќР В Р’В°Р В РЎВР В РЎвЂ: add, read, clear."""
     notes_file = os.path.join(WORKSPACE_DIR, "notes.md")
     if action == "add" and text.strip():
         with open(notes_file, "a", encoding="utf-8") as f:
             f.write(f"- {text.strip()}\n")
-        res = f"Р вЂ”Р В°Р С—Р С‘РЎРѓР В°Р Р…Р С•: {text.strip()}"
+        res = f"Р В РІР‚вЂќР В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В Р’В°Р В Р вЂ¦Р В РЎвЂў: {text.strip()}"
     elif action == "read":
-        res = open(notes_file, "r", encoding="utf-8").read().strip() if os.path.exists(notes_file) else "Р вЂ”Р В°Р СР ВµРЎвЂљР С•Р С” Р Р…Р ВµРЎвЂљ."
+        res = open(notes_file, "r", encoding="utf-8").read().strip() if os.path.exists(notes_file) else "Р В РІР‚вЂќР В Р’В°Р В РЎВР В Р’ВµР РЋРІР‚С™Р В РЎвЂўР В РЎвЂќ Р В Р вЂ¦Р В Р’ВµР РЋРІР‚С™."
     elif action == "clear":
         open(notes_file, "w", encoding="utf-8").close()
-        res = "Р вЂ”Р В°Р СР ВµРЎвЂљР С”Р С‘ Р С•РЎвЂЎР С‘РЎвЂ°Р ВµР Р…РЎвЂ№."
+        res = "Р В РІР‚вЂќР В Р’В°Р В РЎВР В Р’ВµР РЋРІР‚С™Р В РЎвЂќР В РЎвЂ Р В РЎвЂўР РЋРІР‚РЋР В РЎвЂР РЋРІР‚В°Р В Р’ВµР В Р вЂ¦Р РЋРІР‚в„–."
     else:
-        res = "Р Р€Р С”Р В°Р В¶Р С‘РЎвЂљР Вµ action: add, read Р С‘Р В»Р С‘ clear."
+        res = "Р В Р в‚¬Р В РЎвЂќР В Р’В°Р В Р’В¶Р В РЎвЂР РЋРІР‚С™Р В Р’Вµ action: add, read Р В РЎвЂР В Р’В»Р В РЎвЂ clear."
     _log_event("manage_notes", {"action": action}, res)
     return res
 
 @mcp.tool()
 def capture_esp32_logs(seconds: int = 10) -> str:
-    """Р РЋРЎвЂЎР С‘РЎвЂљРЎвЂ№Р Р†Р В°Р ВµРЎвЂљ РЎРѓР С‘РЎРѓРЎвЂљР ВµР СР Р…РЎвЂ№Р Вµ Р В»Р С•Р С–Р С‘ РЎРѓ Р С”Р С•Р В»Р С•Р Р…Р С”Р С‘ ESP32-S3 (COM6)."""
+    """Р В Р Р‹Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋР С“Р В РЎвЂР РЋР С“Р РЋРІР‚С™Р В Р’ВµР В РЎВР В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В Р’В»Р В РЎвЂўР В РЎвЂ“Р В РЎвЂ Р РЋР С“ Р В РЎвЂќР В РЎвЂўР В Р’В»Р В РЎвЂўР В Р вЂ¦Р В РЎвЂќР В РЎвЂ ESP32-S3 (COM6)."""
     ports = list(serial.tools.list_ports.comports())
     esp_port = next((p.device for p in ports if p.device == "COM6" or "usb" in (p.description or "").lower()), None)
     if not esp_port:
-        return "COM-Р С—Р С•РЎР‚РЎвЂљ ESP32-S3 Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…."
+        return "COM-Р В РЎвЂ”Р В РЎвЂўР РЋР вЂљР РЋРІР‚С™ ESP32-S3 Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦."
     log_path = os.path.join(LOGS_DIR, "esp32_serial.log")
     collected = []
     try:
@@ -275,19 +275,19 @@ def capture_esp32_logs(seconds: int = 10) -> str:
                     collected.append(line)
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(f"\n--- {datetime.datetime.now().isoformat()} ---\n" + "\n".join(collected) + "\n")
-        res = f"Р РЋР Р…РЎРЏРЎвЂљР С• {len(collected)} РЎРѓРЎвЂљРЎР‚Р С•Р С” РЎРѓ {esp_port}."
+        res = f"Р В Р Р‹Р В Р вЂ¦Р РЋР РЏР РЋРІР‚С™Р В РЎвЂў {len(collected)} Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РЎвЂќ Р РЋР С“ {esp_port}."
     except Exception as e:
-        res = f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В° РЎвЂЎРЎвЂљР ВµР Р…Р С‘РЎРЏ {esp_port}: {str(e)}"
+        res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р РЋРІР‚РЋР РЋРІР‚С™Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ {esp_port}: {str(e)}"
     _log_event("capture_esp32_logs", {"port": esp_port}, res)
     return res
 
 @mcp.tool()
 def ha_list_devices() -> str:
-    """Р вЂ™Р С•Р В·Р Р†РЎР‚Р В°РЎвЂ°Р В°Р ВµРЎвЂљ РЎРѓР С—Р С‘РЎРѓР С•Р С” Р Р†РЎРѓР ВµРЎвЂ¦ РЎС“РЎРѓРЎвЂљРЎР‚Р С•Р в„–РЎРѓРЎвЂљР Р† РЎС“Р СР Р…Р С•Р С–Р С• Р Т‘Р С•Р СР В° Р С‘Р В· Home Assistant."""
+    """Р В РІР‚в„ўР В РЎвЂўР В Р’В·Р В Р вЂ Р РЋР вЂљР В Р’В°Р РЋРІР‚В°Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋР С“Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В РЎвЂўР В РЎвЂќ Р В Р вЂ Р РЋР С“Р В Р’ВµР РЋРІР‚В¦ Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ  Р РЋРЎвЂњР В РЎВР В Р вЂ¦Р В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В РўвЂР В РЎвЂўР В РЎВР В Р’В° Р В РЎвЂР В Р’В· Home Assistant."""
     ha_url = os.getenv("HA_URL", "http://" + "127.0.0.1" + ":8123").rstrip("/")
     ha_token = os.getenv("HA_TOKEN", "").strip()
     if not ha_token:
-        return "HA_TOKEN Р Р…Р Вµ Р В·Р В°Р Т‘Р В°Р Р…."
+        return "HA_TOKEN Р В Р вЂ¦Р В Р’Вµ Р В Р’В·Р В Р’В°Р В РўвЂР В Р’В°Р В Р вЂ¦."
     try:
         headers = {"Authorization": f"Bearer {ha_token}", "Content-Type": "application/json"}
         resp = requests.get(f"{ha_url}/api/states", headers=headers, timeout=8)
@@ -297,58 +297,244 @@ def ha_list_devices() -> str:
             if eid.startswith(("switch.", "light.", "climate.", "cover.", "sensor.", "vacuum.")):
                 fname = item.get("attributes", {}).get("friendly_name", eid)
                 devices.append(f"{fname} [{eid}]: {item.get('state')}")
-        res = "\n".join(devices) if devices else "Р Р€РЎРѓРЎвЂљРЎР‚Р С•Р в„–РЎРѓРЎвЂљР Р†Р В° Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…РЎвЂ№."
+        res = "\n".join(devices) if devices else "Р В Р в‚¬Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В Р’В° Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦Р РЋРІР‚в„–."
     except Exception as e:
-        res = f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В° HA: {str(e)}"
-    _log_event("ha_list_devices", {}, f"Р СњР В°Р в„–Р Т‘Р ВµР Р…Р С• РЎС“РЎРѓРЎвЂљРЎР‚Р С•Р в„–РЎРѓРЎвЂљР Р†: {len(res.splitlines())}")
+        res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° HA: {str(e)}"
+    _log_event("ha_list_devices", {}, f"Р В РЎСљР В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂў Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ : {len(res.splitlines())}")
     return res
 
 @mcp.tool()
 def ha_control_device(entity_id: str, action: str) -> str:
-    """Р Р€Р С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµРЎвЂљ РЎС“РЎРѓРЎвЂљРЎР‚Р С•Р в„–РЎРѓРЎвЂљР Р†Р С•Р С Р Р† Home Assistant (turn_on, turn_off, toggle, start, return_to_base)."""
+    """Р В Р в‚¬Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂўР В РЎВ Р В Р вЂ  Home Assistant (turn_on, turn_off, toggle, start, return_to_base)."""
     ha_url = os.getenv("HA_URL", "http://" + "127.0.0.1" + ":8123").rstrip("/")
     ha_token = os.getenv("HA_TOKEN", "").strip()
     domain = entity_id.split(".")[0] if "." in entity_id else "homeassistant"
     try:
         headers = {"Authorization": f"Bearer {ha_token}", "Content-Type": "application/json"}
         resp = requests.post(f"{ha_url}/api/services/{domain}/{action}", headers=headers, json={"entity_id": entity_id}, timeout=8)
-        res = f"Р вЂ™РЎвЂ№Р С—Р С•Р В»Р Р…Р ВµР Р…Р С•: {action} Р Т‘Р В»РЎРЏ {entity_id}." if resp.ok else f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В°: {resp.status_code}"
+        res = f"Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В РЎвЂў: {action} Р В РўвЂР В Р’В»Р РЋР РЏ {entity_id}." if resp.ok else f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В°: {resp.status_code}"
     except Exception as e:
-        res = f"Р РЋР В±Р С•Р в„– РЎС“Р С—РЎР‚Р В°Р Р†Р В»Р ВµР Р…Р С‘РЎРЏ: {str(e)}"
+        res = f"Р В Р Р‹Р В Р’В±Р В РЎвЂўР В РІвЂћвЂ“ Р РЋРЎвЂњР В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ: {str(e)}"
     _log_event("ha_control_device", {"entity_id": entity_id, "action": action}, res)
     return res
 
 @mcp.tool()
 def write_workspace_file(filename: str, content: str) -> str:
-    """Р вЂР ВµР В·Р С•Р С—Р В°РЎРѓР Р…Р С• РЎРѓР С•Р В·Р Т‘Р В°Р ВµРЎвЂљ Р С‘Р В»Р С‘ Р С—Р ВµРЎР‚Р ВµР В·Р В°Р С—Р С‘РЎРѓРЎвЂ№Р Р†Р В°Р ВµРЎвЂљ РЎвЂћР В°Р в„–Р В» Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—Р В°Р С—Р С”Р С‘ C:\\XiaoZhi-PC\\workspace."""
+    """Р В РІР‚ВР В Р’ВµР В Р’В·Р В РЎвЂўР В РЎвЂ”Р В Р’В°Р РЋР С“Р В Р вЂ¦Р В РЎвЂў Р РЋР С“Р В РЎвЂўР В Р’В·Р В РўвЂР В Р’В°Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂР В Р’В»Р В РЎвЂ Р В РЎвЂ”Р В Р’ВµР РЋР вЂљР В Р’ВµР В Р’В·Р В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р В Р вЂ Р В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР вЂљР В РЎвЂ Р В РЎвЂ”Р В Р’В°Р В РЎвЂ”Р В РЎвЂќР В РЎвЂ C:\\XiaoZhi-PC\\workspace."""
     safe_name = os.path.basename(filename)
     if not safe_name:
-        return "Р СњР ВµР С”Р С•РЎР‚РЎР‚Р ВµР С”РЎвЂљР Р…Р С•Р Вµ Р С‘Р СРЎРЏ РЎвЂћР В°Р в„–Р В»Р В°."
+        return "Р В РЎСљР В Р’ВµР В РЎвЂќР В РЎвЂўР РЋР вЂљР РЋР вЂљР В Р’ВµР В РЎвЂќР РЋРІР‚С™Р В Р вЂ¦Р В РЎвЂўР В Р’Вµ Р В РЎвЂР В РЎВР РЋР РЏ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В°."
     target_path = os.path.join(WORKSPACE_DIR, safe_name)
     _create_auto_backup("pre_write")
     try:
         with open(target_path, "w", encoding="utf-8") as f:
             f.write(content)
-        res = f"Р В¤Р В°Р в„–Р В» РЎС“РЎРѓР С—Р ВµРЎв‚¬Р Р…Р С• РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р ВµР Р…: {target_path} ({len(content)} Р В±Р В°Р в„–РЎвЂљ)."
+        res = f"Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р РЋРЎвЂњР РЋР С“Р В РЎвЂ”Р В Р’ВµР РЋРІвЂљВ¬Р В Р вЂ¦Р В РЎвЂў Р РЋР С“Р В РЎвЂўР РЋРІР‚В¦Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦: {target_path} ({len(content)} Р В Р’В±Р В Р’В°Р В РІвЂћвЂ“Р РЋРІР‚С™)."
     except Exception as e:
-        res = f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р В·Р В°Р С—Р С‘РЎРѓР С‘ РЎвЂћР В°Р в„–Р В»Р В°: {str(e)}"
+        res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В Р’В·Р В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В РЎвЂ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В°: {str(e)}"
     _log_event("write_workspace_file", {"filename": safe_name, "bytes": len(content)}, res)
     return res
 
 @mcp.tool()
 def launch_workspace_script(filename: str) -> str:
-    """Р вЂ”Р В°Р С—РЎС“РЎРѓР С”Р В°Р ВµРЎвЂљ Python-РЎРѓР С”РЎР‚Р С‘Р С—РЎвЂљ Р С‘Р В· Р С—Р В°Р С—Р С”Р С‘ workspace Р Р† Р С•РЎвЂљР Т‘Р ВµР В»РЎРЉР Р…Р С•Р С Р С•Р С”Р Р…Р Вµ Р В±Р ВµР В· Р В±Р В»Р С•Р С”Р С‘РЎР‚Р С•Р Р†Р С”Р С‘ Р В°Р С–Р ВµР Р…РЎвЂљР В°."""
+    """Р В РІР‚вЂќР В Р’В°Р В РЎвЂ”Р РЋРЎвЂњР РЋР С“Р В РЎвЂќР В Р’В°Р В Р’ВµР РЋРІР‚С™ Python-Р РЋР С“Р В РЎвЂќР РЋР вЂљР В РЎвЂР В РЎвЂ”Р РЋРІР‚С™ Р В РЎвЂР В Р’В· Р В РЎвЂ”Р В Р’В°Р В РЎвЂ”Р В РЎвЂќР В РЎвЂ workspace Р В Р вЂ  Р В РЎвЂўР РЋРІР‚С™Р В РўвЂР В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р В РЎвЂўР В РЎВ Р В РЎвЂўР В РЎвЂќР В Р вЂ¦Р В Р’Вµ Р В Р’В±Р В Р’ВµР В Р’В· Р В Р’В±Р В Р’В»Р В РЎвЂўР В РЎвЂќР В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В РЎвЂќР В РЎвЂ Р В Р’В°Р В РЎвЂ“Р В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р В Р’В°."""
     safe_name = os.path.basename(filename)
     target_path = os.path.join(WORKSPACE_DIR, safe_name)
     if not os.path.exists(target_path):
-        return f"Р В¤Р В°Р в„–Р В» {safe_name} Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р… Р Р† workspace."
+        return f"Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» {safe_name} Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦ Р В Р вЂ  workspace."
     try:
         subprocess.Popen([r"C:\Python315\python.exe", target_path], cwd=WORKSPACE_DIR, creationflags=subprocess.CREATE_NEW_CONSOLE)
-        res = f"Р РЋР С”РЎР‚Р С‘Р С—РЎвЂљ {safe_name} Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р… Р Р† Р С•РЎвЂљР Т‘Р ВµР В»РЎРЉР Р…Р С•Р С Р С•Р С”Р Р…Р Вµ."
+        res = f"Р В Р Р‹Р В РЎвЂќР РЋР вЂљР В РЎвЂР В РЎвЂ”Р РЋРІР‚С™ {safe_name} Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋРЎвЂњР РЋРІР‚В°Р В Р’ВµР В Р вЂ¦ Р В Р вЂ  Р В РЎвЂўР РЋРІР‚С™Р В РўвЂР В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р В РЎвЂўР В РЎВ Р В РЎвЂўР В РЎвЂќР В Р вЂ¦Р В Р’Вµ."
     except Exception as e:
-        res = f"Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р В·Р В°Р С—РЎС“РЎРѓР С”Р В°: {str(e)}"
+        res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋРЎвЂњР РЋР С“Р В РЎвЂќР В Р’В°: {str(e)}"
     _log_event("launch_workspace_script", {"filename": safe_name}, res)
     return res
+# === СИСТЕМНЫЙ ПУЛЬТ ПК (БРАУЗЕР, БУФЕР ОБМЕНА, СЕТЬ, ПИТАНИЕ) ===
+
+@mcp.tool()
+def open_website(target: str) -> str:
+    """Открывает сайт в браузере Windows. Поддерживает имена ('youtube', 'yandex', 'github', 'ha', 'xiaozhi') или полный URL."""
+    import webbrowser
+    aliases = {
+        "youtube": "https://" + "://youtube.com",
+        "yandex": "https://" + "ya.ru",
+        "music": "https://" + "music.yandex.ru",
+        "github": "https://" + "://github.com",
+        "ha": "http://" + "127.0.0.1:8123",
+        "xiaozhi": "https://" + "xiaozhi.me"
+    }
+    key = target.lower().strip()
+    url = aliases.get(key, target.strip())
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    webbrowser.open(url)
+    res = f"Открыто в браузере: {url}"
+    _log_event("open_website", {"url": url}, res)
+    return res
+
+@mcp.tool()
+def clipboard_manager(action: str, text: str = "") -> str:
+    """Работает с буфером обмена Windows: 'read' (прочитать) или 'write' (записать текст)."""
+    import pyperclip
+    if action == "read":
+        content = pyperclip.paste()
+        res = f"В буфере обмена: {content[:500]}" if content else "Буфер обмена пуст."
+    elif action == "write":
+        pyperclip.copy(text)
+        res = f"Скопировано в буфер обмена ({len(text)} симв.)."
+    else:
+        res = "Укажите action: 'read' или 'write'."
+    _log_event("clipboard_manager", {"action": action}, res)
+    return res
+
+@mcp.tool()
+def scan_local_network() -> str:
+    """Показывает активные устройства в локальной домашней сети Wi-Fi (IP и MAC-адреса)."""
+    return run_safe_powershell("arp -a | Select-String 'dynamic|динамический'")
+
+@mcp.tool()
+def pc_power_control(action: str, minutes: int = 30) -> str:
+    """Управляет экраном и таймером сна ПК: 'lock' (блокировка), 'sleep_timer' (сон через N мин), 'cancel_timer' (отмена)."""
+    if action == "lock":
+        return run_safe_powershell("rundll32.exe user32.dll,LockWorkStation")
+    elif action == "sleep_timer":
+        sec = max(60, int(minutes) * 60)
+        return run_safe_powershell(f"shutdown /s /t {sec}")
+    elif action == "cancel_timer":
+        return run_safe_powershell("shutdown /a")
+    return "Доступные действия: lock, sleep_timer, cancel_timer."
+
+# === ЧАСТЬ 2: ЖИВОЙ ВЕБ-ПОИСК И СУБ-АГЕНТ ПРОГРАММИСТ (GEMINI 2.5 PRO) ===
+
+@mcp.tool()
+def web_search_info(query: str, max_results: int = 4) -> str:
+    """Ищет актуальную информацию в интернете в реальном времени (новости, факты, документация, цены)."""
+    try:
+        from ddgs import DDGS
+        results = []
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, max_results=min(max_results, 6)):
+                results.append(f"- {r.get('title')}: {r.get('body')} ({r.get('href')})")
+        res = "\n".join(results) if results else f"По запросу '{query}' ничего не найдено."
+    except Exception as e:
+        res = f"Ошибка веб-поиска: {str(e)}"
+    _log_event("web_search_info", {"query": query}, f"Результатов: {len(res.splitlines())}")
+    return res
+
+@mcp.tool()
+def ask_coder_pro(task_description: str, save_to_filename: str = "") -> str:
+    """Передает сложную задачу программирования суб-агенту Gemini 2.5 Pro и при указании имени файла сразу сохраняет код в workspace."""
+    api_key = os.getenv("LLM_API_KEY", "").strip()
+    base_url = os.getenv("LLM_BASE_URL", "https://" + "api.proxyapi.ru" + "/google/v1").rstrip("/")
+    if not api_key:
+        return "Ошибка: LLM_API_KEY не задан в .env."
+    sys_msg = "Ты — элитный Python-разработчик. Напиши полный, рабочий, проверенный код. Если нужно сохранить файл — выведи ТОЛЬКО чистый код без markdown-оберток."
+    try:
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": "gemini-2.5-pro",
+                "messages": [{"role": "system", "content": sys_msg}, {"role": "user", "content": task_description}],
+                "temperature": 0.2
+            },
+            timeout=45
+        )
+        if not resp.ok:
+            return f"Ошибка ProxyAPI ({resp.status_code}): {resp.text[:200]}"
+        answer = resp.json()["choices"][0]["message"]["content"].strip()
+        answer = re.sub(r"^`[a-zA-Z]*\n", "", answer)
+        answer = re.sub(r"\n`$", "", answer)
+        if save_to_filename.strip():
+            save_res = write_workspace_file(save_to_filename.strip(), answer)
+            res = f"Суб-агент Gemini 2.5 Pro выполнил задачу. {save_res}"
+        else:
+            res = answer[:1500]
+    except Exception as e:
+        res = f"Сбой суб-агента кодера: {str(e)}"
+    _log_event("ask_coder_pro", {"task": task_description[:80], "file": save_to_filename}, res[:200])
+    return res
+
+
+@mcp.tool()
+def phone_send_document(filename: str, content: str, caption: str = "Файл от Джонни") -> str:
+    """Создает файл (текст, код, список, HTML-отчет) и отправляет его прямо на телефон пользователя через ntfy."""
+    topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
+    if not topic:
+        return "Канал ntfy не настроен в .env."
+    safe_name = os.path.basename(filename) or "note.txt"
+    from urllib.parse import quote
+    ntfy_url = "https://" + "ntfy.sh" + f"/{topic}?message={quote(caption)}"
+    try:
+        resp = requests.put(
+            ntfy_url,
+            data=content.encode("utf-8"),
+            headers={"Filename": safe_name, "Title": f"Johnny File: {safe_name}"},
+            timeout=15
+        )
+        res = f"Файл '{safe_name}' успешно отправлен на телефон." if resp.ok else f"Ошибка ntfy: {resp.status_code}"
+    except Exception as e:
+        res = f"Сбой отправки файла: {str(e)}"
+    _log_event("phone_send_document", {"filename": safe_name, "bytes": len(content)}, res)
+    return res
+
+
+# === АВАРИЙНЫЙ ПУЛЬТ И УДАЛЕННЫЙ ДОСТУП (ANYDESK / RUSTDESK / САМОВОССТАНОВЛЕНИЕ) ===
+
+@mcp.tool()
+def remote_access_control(action: str = "status") -> str:
+    """Управляет удаленным доступом AnyDesk или RustDesk на ноутбуке: 'status', 'start_anydesk', 'start_rustdesk'."""
+    paths = {
+        "anydesk": [r"C:\Program Files (x86)\AnyDesk\AnyDesk.exe", r"C:\Program Files\AnyDesk\AnyDesk.exe"],
+        "rustdesk": [r"C:\Program Files\RustDesk\rustdesk.exe"]
+    }
+    if action == "status":
+        res = run_safe_powershell("Get-Process anydesk,rustdesk -ErrorAction SilentlyContinue | Select-Object ProcessName, Id")
+        return res if "Id" in res else "Ни AnyDesk, ни RustDesk сейчас не запущены."
+    elif action == "start_anydesk":
+        for p in paths["anydesk"]:
+            if os.path.exists(p):
+                subprocess.Popen([p], creationflags=subprocess.DETACHED_PROCESS)
+                _log_event("remote_access_control", {"action": action}, "AnyDesk запущен")
+                return "AnyDesk запущен на ноутбуке."
+        return "AnyDesk не найден на диске C. Установите его или используйте RustDesk."
+    elif action == "start_rustdesk":
+        for p in paths["rustdesk"]:
+            if os.path.exists(p):
+                subprocess.Popen([p], creationflags=subprocess.DETACHED_PROCESS)
+                _log_event("remote_access_control", {"action": action}, "RustDesk запущен")
+                return "RustDesk запущен на ноутбуке."
+        return "RustDesk не найден на диске C."
+    return "Доступные действия: status, start_anydesk, start_rustdesk."
+
+@mcp.tool()
+def system_self_heal(target: str) -> str:
+    """Аварийное восстановление сервисов: 'ha' (перезапуск Home Assistant), 'docker' (статус/перезапуск контейнеров), 'reboot_pc' (мягкая перезагрузка ноутбука)."""
+    _log_event("system_self_heal", {"target": target}, "Запущено восстановление")
+    if target == "ha":
+        return run_safe_powershell("docker restart xiaozhi-homeassistant")
+    elif target == "docker":
+        return run_safe_powershell("docker restart xiaozhi-docker-sandbox xiaozhi-homeassistant")
+    elif target == "reboot_pc":
+        phone_send_ntfy("Внимание: Джонни инициировал плановую перезагрузку ноутбука по вашей команде.", attach_screenshot=False)
+        subprocess.Popen(["shutdown", "/r", "/t", "10"])
+        return "Ноутбук перезагрузится через 10 секунд. Все службы поднимутся автоматически."
+    return "Доступные цели: ha, docker, reboot_pc."
+
+
+@mcp.tool()
+def speak_johnny_pc(text: str) -> str:
+    """Озвучивает фразу через динамики ноутбука системным синтезатором Windows."""
+    safe_txt = text.replace('"', '').replace("'", "")
+    ps_cmd = f'Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("{safe_txt}")'
+    try:
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], timeout=45)
+        res = "Фраза озвучена через динамики ПК."
+    except Exception as e:
+        res = f"Ошибка озвучки ПК: {str(e)}"
+    _log_event("speak_johnny_pc", {"text": text[:60]}, res)
+    return res
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
 

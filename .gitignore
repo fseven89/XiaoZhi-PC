@@ -10,4 +10,6 @@ vpn-config/
 ha-config/
 logs/
 backups/
+firmware-backup/
+xiaozhi-esp32/
 state.json

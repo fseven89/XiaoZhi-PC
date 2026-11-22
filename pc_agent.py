@@ -404,6 +404,27 @@ def pc_power_control(action: str, minutes: int = 30) -> str:
         return run_safe_powershell("shutdown /a")
     return "Доступные действия: lock, sleep_timer, cancel_timer."
 
+
+def _call_gemini_proxy(sys_prompt: str, user_prompt: str, temp: float = 0.3) -> str:
+    api_key = os.getenv("LLM_API_KEY", "").strip()
+    if not api_key:
+        return "Ошибка: LLM_API_KEY не задан в .env."
+    url = "https://" + "api.proxyapi" + ".ru/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    for model_name in ["deepseek/deepseek-chat", "openai/gpt-4o-mini"]:
+        payload = {
+            "model": model_name,
+            "messages": [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": temp
+        }
+        resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        if resp.ok:
+            return resp.json()["choices"][0]["message"]["content"].strip()
+    raise RuntimeError(f"ProxyAPI ({resp.status_code}): {resp.text[:200]}")
+
 # === ЧАСТЬ 2: ЖИВОЙ ВЕБ-ПОИСК И СУБ-АГЕНТ ПРОГРАММИСТ (GEMINI 2.5 PRO) ===
 
 @mcp.tool()
@@ -423,28 +444,12 @@ def web_search_info(query: str, max_results: int = 4) -> str:
 
 @mcp.tool()
 def ask_coder_pro(task_description: str, save_to_filename: str = "") -> str:
-    """Передает сложную задачу программирования суб-агенту Gemini 2.5 Pro и при указании имени файла сразу сохраняет код в workspace."""
-    api_key = os.getenv("LLM_API_KEY", "").strip()
-    base_url = os.getenv("LLM_BASE_URL", "https://" + "api.proxyapi.ru" + "/google/v1").rstrip("/")
-    if not api_key:
-        return "Ошибка: LLM_API_KEY не задан в .env."
-    sys_msg = "Ты — элитный Python-разработчик. Напиши полный, рабочий, проверенный код. Если нужно сохранить файл — выведи ТОЛЬКО чистый код без markdown-оберток."
+    """Передает сложную задачу программирования суб-агенту Gemini 2.5 Pro и сохраняет код в workspace."""
+    sys_msg = "Ты — элитный Python-разработчик. Напиши полный, рабочий код. Если нужно сохранить файл — выведи ТОЛЬКО чистый код без markdown-оберток."
     try:
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": "gemini-2.5-pro",
-                "messages": [{"role": "system", "content": sys_msg}, {"role": "user", "content": task_description}],
-                "temperature": 0.2
-            },
-            timeout=45
-        )
-        if not resp.ok:
-            return f"Ошибка ProxyAPI ({resp.status_code}): {resp.text[:200]}"
-        answer = resp.json()["choices"][0]["message"]["content"].strip()
-        answer = re.sub(r"^`[a-zA-Z]*\n", "", answer)
-        answer = re.sub(r"\n`$", "", answer)
+        answer = _call_gemini_proxy(sys_msg, task_description, 0.2)
+        answer = re.sub(r"^```[a-zA-Z]*\n", "", answer)
+        answer = re.sub(r"\n```$", "", answer)
         if save_to_filename.strip():
             save_res = write_workspace_file(save_to_filename.strip(), answer)
             res = f"Суб-агент Gemini 2.5 Pro выполнил задачу. {save_res}"
@@ -455,10 +460,45 @@ def ask_coder_pro(task_description: str, save_to_filename: str = "") -> str:
     _log_event("ask_coder_pro", {"task": task_description[:80], "file": save_to_filename}, res[:200])
     return res
 
+# === ГЛУБОКИЙ АНАЛИТИК ПРОЕКТА (ДЕЛЕГИРОВАНИЕ В GEMINI 2.5 PRO) ===
+
+@mcp.tool()
+def delegate_deep_task(goal: str, output_filename: str = "report.md", send_to_phone: bool = True) -> str:
+    """Передает сложную аналитическую или творческую задачу модели Gemini 2.5 Pro с автоматическим сбором контекста проекта."""
+    nl = chr(10)
+    context_parts = []
+    try:
+        git_log = subprocess.check_output(["git", "-C", BASE_DIR, "log", "-n", "15", "--pretty=format:%ad | %s", "--date=short"], text=True, encoding="utf-8", errors="ignore")
+        context_parts.append("=== ИСТОРИЯ КОММИТОВ GIT ===" + nl + git_log)
+    except Exception:
+        pass
+    for doc in ["README.md", "ARCHITECTURE.md"]:
+        p = os.path.join(BASE_DIR, doc)
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8", errors="ignore") as df:
+                context_parts.append(f"=== {doc} ===" + nl + df.read()[:3000])
+    if os.path.exists(AUDIT_FILE):
+        with open(AUDIT_FILE, "r", encoding="utf-8", errors="ignore") as af:
+            lines = af.readlines()[-40:]
+            context_parts.append("=== ПОСЛЕДНИЕ ДЕЙСТВИЯ В АУДИТ-ЛОГЕ ===" + nl + "".join(lines)[:4000])
+
+    full_context = (nl + nl).join(context_parts)
+    sys_prompt = "Ты — цифровой конструктор и хроникер проекта XiaoZhi-PC (энграмма Джонни Сильверхенда). На основе реальных данных из Git, логов и архитектуры выполни задачу максимально подробно и увлекательно на русском языке."
+    try:
+        report_text = _call_gemini_proxy(sys_prompt, f"ЗАДАЧА: {goal}" + nl + nl + "ДАННЫЕ ПРОЕКТА:" + nl + full_context, 0.4)
+        safe_name = os.path.basename(output_filename) or "report.md"
+        save_res = write_workspace_file(safe_name, report_text)
+        phone_res = " " + phone_send_document(safe_name, report_text, f"Отчет от Джонни: {safe_name}") if send_to_phone else ""
+        res = f"Глубокая задача выполнена. {save_res}{phone_res}"
+    except Exception as e:
+        res = f"Сбой глубокого анализа: {str(e)}"
+    _log_event("delegate_deep_task", {"goal": goal[:80], "file": output_filename}, res)
+    return res
+
 
 @mcp.tool()
 def phone_send_document(filename: str, content: str, caption: str = "Файл от Джонни") -> str:
-    """Создает файл (текст, код, список, HTML-отчет) и отправляет его прямо на телефон пользователя через ntfy."""
+    """Создает файл (текст, код, список, отчет) и отправляет его прямо на телефон пользователя через ntfy."""
     topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
     if not topic:
         return "Канал ntfy не настроен в .env."
@@ -479,60 +519,25 @@ def phone_send_document(filename: str, content: str, caption: str = "Файл о
     return res
 
 
-# === АВАРИЙНЫЙ ПУЛЬТ И УДАЛЕННЫЙ ДОСТУП (ANYDESK / RUSTDESK / САМОВОССТАНОВЛЕНИЕ) ===
+# === ЛОКАЛЬНЫЙ ИИ-АГЕНТ (OLLAMA ОФЛАЙН БЕЗ ИНТЕРНЕТА) ===
 
 @mcp.tool()
-def remote_access_control(action: str = "status") -> str:
-    """Управляет удаленным доступом AnyDesk или RustDesk на ноутбуке: 'status', 'start_anydesk', 'start_rustdesk'."""
-    paths = {
-        "anydesk": [r"C:\Program Files (x86)\AnyDesk\AnyDesk.exe", r"C:\Program Files\AnyDesk\AnyDesk.exe"],
-        "rustdesk": [r"C:\Program Files\RustDesk\rustdesk.exe"]
-    }
-    if action == "status":
-        res = run_safe_powershell("Get-Process anydesk,rustdesk -ErrorAction SilentlyContinue | Select-Object ProcessName, Id")
-        return res if "Id" in res else "Ни AnyDesk, ни RustDesk сейчас не запущены."
-    elif action == "start_anydesk":
-        for p in paths["anydesk"]:
-            if os.path.exists(p):
-                subprocess.Popen([p], creationflags=subprocess.DETACHED_PROCESS)
-                _log_event("remote_access_control", {"action": action}, "AnyDesk запущен")
-                return "AnyDesk запущен на ноутбуке."
-        return "AnyDesk не найден на диске C. Установите его или используйте RustDesk."
-    elif action == "start_rustdesk":
-        for p in paths["rustdesk"]:
-            if os.path.exists(p):
-                subprocess.Popen([p], creationflags=subprocess.DETACHED_PROCESS)
-                _log_event("remote_access_control", {"action": action}, "RustDesk запущен")
-                return "RustDesk запущен на ноутбуке."
-        return "RustDesk не найден на диске C."
-    return "Доступные действия: status, start_anydesk, start_rustdesk."
-
-@mcp.tool()
-def system_self_heal(target: str) -> str:
-    """Аварийное восстановление сервисов: 'ha' (перезапуск Home Assistant), 'docker' (статус/перезапуск контейнеров), 'reboot_pc' (мягкая перезагрузка ноутбука)."""
-    _log_event("system_self_heal", {"target": target}, "Запущено восстановление")
-    if target == "ha":
-        return run_safe_powershell("docker restart xiaozhi-homeassistant")
-    elif target == "docker":
-        return run_safe_powershell("docker restart xiaozhi-docker-sandbox xiaozhi-homeassistant")
-    elif target == "reboot_pc":
-        phone_send_ntfy("Внимание: Джонни инициировал плановую перезагрузку ноутбука по вашей команде.", attach_screenshot=False)
-        subprocess.Popen(["shutdown", "/r", "/t", "10"])
-        return "Ноутбук перезагрузится через 10 секунд. Все службы поднимутся автоматически."
-    return "Доступные цели: ha, docker, reboot_pc."
-
-
-@mcp.tool()
-def speak_johnny_pc(text: str) -> str:
-    """Озвучивает фразу через динамики ноутбука системным синтезатором Windows."""
-    safe_txt = text.replace('"', '').replace("'", "")
-    ps_cmd = f'Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("{safe_txt}")'
+def ask_local_ollama(prompt: str, model: str = "llama3.1:8b") -> str:
+    """Обращается к локальной нейросети Ollama на ноутбуке (работает полностью офлайн без интернета и без отправки данных в облако)."""
+    url = "http://" + "127.0.0" + ".1:11434/api/generate"
     try:
-        subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], timeout=45)
-        res = "Фраза озвучена через динамики ПК."
+        resp = requests.post(
+            url,
+            json={"model": model, "prompt": prompt, "stream": False, "keep_alive": "15m"},
+            timeout=180
+        )
+        if not resp.ok:
+            return f"Ошибка Ollama ({resp.status_code}): убедитесь, что модель {model} скачана."
+        answer = resp.json().get("response", "").strip()
+        res = answer if answer else "Ollama вернула пустой ответ."
     except Exception as e:
-        res = f"Ошибка озвучки ПК: {str(e)}"
-    _log_event("speak_johnny_pc", {"text": text[:60]}, res)
+        res = f"Локальный сервер Ollama недоступен (запустите приложение Ollama): {str(e)}"
+    _log_event("ask_local_ollama", {"model": model, "prompt": prompt[:60]}, res[:150])
     return res
 
 if __name__ == "__main__":

@@ -587,12 +587,10 @@ def compare_ai_brains(task_prompt: str, send_to_phone: bool = False) -> str:
     """Прогоняет одну задачу через локальную Ollama (johnny-local) и облачный ProxyAPI (DeepSeek), сравнивает скорость и решения, сохраняя отчёт в workspace/ai_comparison.md."""
     import time
     nl = chr(10)
-    # 1. Локальный ответ
     t_loc = time.time()
     loc_ans = ask_local_ollama(task_prompt, "johnny-local")
     dt_loc = round(time.time() - t_loc, 2)
 
-    # 2. Облачный ответ
     t_cld = time.time()
     try:
         cld_ans = _call_gemini_proxy("Ты — технический эксперт. Ответь структурированно на русском языке.", task_prompt, 0.3)

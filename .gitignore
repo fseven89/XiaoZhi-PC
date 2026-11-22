@@ -1,6 +1,7 @@
 ﻿.env
 *.key
 *.pem
+*.dmp
 __pycache__/
 venv/
 .vscode/

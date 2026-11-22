@@ -40,6 +40,27 @@ def _redact_secrets(text: str) -> str:
             out = out.replace(val, "[СКРЫТО]")
     return out
 
+
+AI_AUDIT_FILE = os.path.join(LOGS_DIR, "ai_decisions_audit.jsonl")
+
+def _log_ai_decision(engine: str, model: str, prompt: str, response: str, duration_sec: float, tokens: int = 0):
+    entry = {
+        "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        "mode": _load_state().get("mode", "companion"),
+        "engine": engine,
+        "model": model,
+        "duration_sec": round(duration_sec, 2),
+        "tokens": tokens,
+        "tokens_per_sec": round(tokens / duration_sec, 1) if duration_sec > 0 and tokens > 0 else 0,
+        "prompt": _redact_secrets(prompt),
+        "response": _redact_secrets(response)
+    }
+    try:
+        with open(AI_AUDIT_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + chr(10))
+    except Exception:
+        pass
+
 def _log_event(tool_name: str, args: dict, result: str):
     entry = {
         "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
@@ -529,26 +550,68 @@ def phone_send_document(filename: str, content: str, caption: str = "Файл о
     return res
 
 
-# === ЛОКАЛЬНЫЙ ИИ-АГЕНТ (OLLAMA ОФЛАЙН БЕЗ ИНТЕРНЕТА) ===
+# === ЛОКАЛЬНЫЙ ИИ-АГЕНТ (OLLAMA JOHNNY-LOCAL + ПОЛНАЯ ТЕЛЕМЕТРИЯ) ===
 
 @mcp.tool()
-def ask_local_ollama(prompt: str, model: str = "llama3.1:8b") -> str:
-    """Обращается к локальной нейросети Ollama на ноутбуке (работает полностью офлайн без интернета и без отправки данных в облако)."""
-    url = "http://" + "127.0.0" + ".1:11434/api/generate"
+def ask_local_ollama(prompt: str, model: str = "johnny-local") -> str:
+    """Обращается к локальной настроенной нейросети johnny-local (Ollama) с полной фиксацией хода рассуждений и скорости в ai_decisions_audit.jsonl."""
+    import time
+    url = "http://" + "127.0.0" + ".1:11434/api/chat"
+    t0 = time.time()
     try:
         resp = requests.post(
             url,
-            json={"model": model, "prompt": prompt, "stream": False, "keep_alive": "15m"},
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "keep_alive": "24h"
+            },
             timeout=180
         )
+        dt = time.time() - t0
         if not resp.ok:
-            return f"Ошибка Ollama ({resp.status_code}): убедитесь, что модель {model} скачана."
-        answer = resp.json().get("response", "").strip()
-        res = answer if answer else "Ollama вернула пустой ответ."
+            return f"Ошибка Ollama ({resp.status_code}): {resp.text[:150]}"
+        data = resp.json()
+        answer = data.get("message", {}).get("content", "").strip()
+        eval_count = data.get("eval_count", 0)
+        _log_ai_decision("ollama_local", model, prompt, answer, dt, eval_count)
+        res = answer if answer else "Локальная модель вернула пустой ответ."
     except Exception as e:
-        res = f"Локальный сервер Ollama недоступен (запустите приложение Ollama): {str(e)}"
-    _log_event("ask_local_ollama", {"model": model, "prompt": prompt[:60]}, res[:150])
+        res = f"Локальный сервер Ollama недоступен: {str(e)}"
+    _log_event("ask_local_ollama", {"model": model, "prompt": prompt[:60]}, res[:200])
     return res
+
+@mcp.tool()
+def compare_ai_brains(task_prompt: str, send_to_phone: bool = False) -> str:
+    """Прогоняет одну задачу через локальную Ollama (johnny-local) и облачный ProxyAPI (DeepSeek), сравнивает скорость и решения, сохраняя отчёт в workspace/ai_comparison.md."""
+    import time
+    nl = chr(10)
+    # 1. Локальный ответ
+    t_loc = time.time()
+    loc_ans = ask_local_ollama(task_prompt, "johnny-local")
+    dt_loc = round(time.time() - t_loc, 2)
+
+    # 2. Облачный ответ
+    t_cld = time.time()
+    try:
+        cld_ans = _call_gemini_proxy("Ты — технический эксперт. Ответь структурированно на русском языке.", task_prompt, 0.3)
+    except Exception as e:
+        cld_ans = f"Ошибка облака: {e}"
+    dt_cld = round(time.time() - t_cld, 2)
+    _log_ai_decision("proxyapi_cloud", "deepseek-chat", task_prompt, cld_ans, dt_cld, 0)
+
+    report = (
+        f"# Сравнительный анализ ИИ-решений{nl}"
+        f"**Задача:** {task_prompt}{nl}{nl}"
+        f"## 1. Локальный модуль Ollama (`johnny-local`) — {dt_loc} сек.{nl}{loc_ans}{nl}{nl}"
+        f"---{nl}{nl}"
+        f"## 2. Облачный модуль ProxyAPI (`deepseek-chat`) — {dt_cld} сек.{nl}{cld_ans}{nl}"
+    )
+    save_msg = write_workspace_file("ai_comparison.md", report)
+    if send_to_phone:
+        phone_send_document("ai_comparison.md", report, "Сравнение Ollama vs Cloud")
+    return f"Сравнение завершено (Локально: {dt_loc}с | Облако: {dt_cld}с). {save_msg}"
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

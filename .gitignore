@@ -7,4 +7,6 @@ venv/
 workspace/
 vpn-config/
 ha-config/
+logs/
+backups/
 state.json

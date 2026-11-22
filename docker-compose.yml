@@ -11,6 +11,7 @@
       - .env
     volumes:
       - ./workspace:/app/workspace:rw
+      - ./logs:/app/logs:ro
 
   homeassistant:
     image: ghcr.io/home-assistant/home-assistant:stable
@@ -32,3 +33,4 @@
     volumes:
       - ./vpn-config:/etc/sing-box:ro
     command: -D /var/lib/sing-box -C /etc/sing-box run
+

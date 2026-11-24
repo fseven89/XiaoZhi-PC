@@ -611,6 +611,17 @@ def compare_ai_brains(task_prompt: str, send_to_phone: bool = False) -> str:
         phone_send_document("ai_comparison.md", report, "Сравнение Ollama vs Cloud")
     return f"Сравнение завершено (Локально: {dt_loc}с | Облако: {dt_cld}с). {save_msg}"
 
+
+@mcp.tool()
+def read_esp32_live_logs(lines: int = 40) -> str:
+    """Читает последние строки непрерывного журнала работы колонки XiaoZhi (Wi-Fi, WebSocket xiaozhi.me, ошибки платы)."""
+    log_p = os.path.join(LOGS_DIR, "esp32_live.log")
+    if not os.path.exists(log_p):
+        return "Файл esp32_live.log пока пуст (убедитесь, что колонка подключена к COM6)."
+    with open(log_p, "r", encoding="utf-8", errors="replace") as f:
+        tail = f.readlines()[-min(lines, 150):]
+    return "".join(tail) if tail else "Лог пуст."
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
 

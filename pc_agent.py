@@ -360,7 +360,7 @@ def write_workspace_file(filename: str, content: str) -> str:
     try:
         with open(target_path, "w", encoding="utf-8") as f:
             f.write(content)
-        res = f"Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р РЋРЎвЂњР РЋР С“Р В РЎвЂ”Р В Р’ВµР РЋРІвЂљВ¬Р В Р вЂ¦Р В РЎвЂў Р РЋР С“Р В РЎвЂўР РЋРІР‚В¦Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦: {target_path} ({len(content)} Р В Р’В±Р В Р’В°Р В РІвЂћвЂ“Р РЋРІР‚С™)."
+        res = f"File saved: {target_path} ({len(content)} bytes)."
     except Exception as e:
         res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В Р’В·Р В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В РЎвЂ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В°: {str(e)}"
     _log_event("write_workspace_file", {"filename": safe_name, "bytes": len(content)}, res)

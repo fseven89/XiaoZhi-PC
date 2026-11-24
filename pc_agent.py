@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Курчицикий М.С (fseven89). All rights reserved.
+# Project: XiaoZhi-PC (https://github.com)
 import datetime, glob, json, os, re, subprocess, tempfile, zipfile
 import psutil, requests, mss, serial, serial.tools.list_ports
 from dotenv import load_dotenv
@@ -518,9 +520,9 @@ def delegate_deep_task(goal: str, output_filename: str = "report.md", send_to_ph
             context_parts.append("=== ПОСЛЕДНИЕ ДЕЙСТВИЯ В АУДИТ-ЛОГЕ ===" + nl + "".join(lines)[:4000])
 
     full_context = (nl + nl).join(context_parts)
-    sys_prompt = "Ты — цифровой конструктор и хроникер проекта XiaoZhi-PC (энграмма Джонни Сильверхенда). На основе реальных данных из Git, логов и архитектуры выполни задачу максимально подробно и увлекательно на русском языке."
+    sys_prompt = "Ты — строгий технический аналитик проекта XiaoZhi-PC (Автор: Курчицикий М.С / fseven89). СТРОГИЙ ЗАПРЕТ НА ВЫДУМКИ: опирайся ТОЛЬКО на факты, которые буквально присутствуют в разделе ДАННЫЕ ПРОЕКТА. Категорически запрещено выдумывать события Windows, коды ошибок, имена функций или предлагать откатывать код без прямых доказательств. Если данных недостаточно, прямо напиши: НЕДОСТАТОЧНО ДАННЫХ. На основе реальных данных из Git, логов и архитектуры выполни задачу максимально подробно и увлекательно на русском языке."
     try:
-        report_text = _call_gemini_proxy(sys_prompt, f"ЗАДАЧА: {goal}" + nl + nl + "ДАННЫЕ ПРОЕКТА:" + nl + full_context, 0.4)
+        report_text = _call_gemini_proxy(sys_prompt, f"ЗАДАЧА: {goal}" + nl + nl + "ДАННЫЕ ПРОЕКТА:" + nl + full_context, 0.1)
         safe_name = os.path.basename(output_filename) or "report.md"
         save_res = write_workspace_file(safe_name, report_text)
         phone_res = " " + phone_send_document(safe_name, report_text, f"Отчет от Джонни: {safe_name}") if send_to_phone else ""

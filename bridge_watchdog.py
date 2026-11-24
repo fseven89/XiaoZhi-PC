@@ -20,7 +20,7 @@ def send_cloud_heartbeat():
         if not vps_url:
             return
         secret = os.getenv("CLOUD_HEARTBEAT_SECRET", "johnny_sbge_2077").strip()
-        requests.post(f"{vps_url}/heartbeat", headers={"X-SBGE-Token": secret}, timeout=4)
+        requests.post(f"{vps_url}/sbge-heartbeat", headers={"X-SBGE-Token": secret}, timeout=4)
     except Exception:
         pass
 

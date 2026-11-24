@@ -1,70 +1,73 @@
-﻿# Архитектура системы: «XiaoZhi-PC: Энграмма Джонни Сильверхенда»
+# Архитектура проекта XiaoZhi-PC («Энграмма Джонни Сильверхенда»)
+**Версия:** 3.99.9 (База ПК завершена) -> 4.0 (Прошивка ESP32-S3 и Голос)  
+**Автор:** Курчицикий М.С (`fseven89`) | **Лицензия:** MIT (`LICENSE`)
 
-## 1. Общая схема взаимодействия (Диаграмма потоков)
+---
 
-``text
-[ ГОЛОСОВОЙ ТЕРМИНАЛ ]                   [ ОБЛАКО XIAOZHI.ME ]
-  Колонка XiaoZhi AI  <--- WebSocket --->  Маршрутизация ИИ и речи
-  (ESP32-S3, COM6)                         (Роль Джонни: 3 режима)
-         │                                           │
-         │ (USB Serial: логи и прошивка)             │ (WSS MCP Endpoint)
-         ▼                                           ▼
+## 1. Общая топология системы (Гибридная СБГЭ)
+
+```text
+[Пользователь: Голос / Poco F7 / Mi Band 10]
+       │
+       ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│                    ХОСТ-МАШИНА: WINDOWS (C:\XiaoZhi-PC)              │
+│ АППАРАТНЫЙ ТЕРМИНАЛ: XiaoZhi AI (ESP32-S3 N16R8 / COOLKIT_XZ_02)     │
+│ • Экран 1.54" ST7789 (240x240) • Аудио Simplex • Порт COM6 (115200)  │
+│ • [Этап v4.0]: WakeWord «Джонни» + HUD Cyberpunk + JohnnySubsystem     │
+└──────┬───────────────────────────────────────────────────┬───────────┘
+       │ WSS (Облако xiaozhi.me + База знаний)            │ USB UART (COM6)
+       ▼                                                   ▼
+┌──────────────────────────────────────────┐   ┌───────────────────────┐
+│ ОБЛАЧНЫЙ ЗАДЕЛ (VPS 24/7 — Cloud-Ready)  │   │ esp32_serial_logger.py│
+│ • cloud_sentinel.py (Порт 8765)          │◄──┤ (24/7 сбор логов плат)│
+│ • Приём Heartbeat каждые 15 сек          │   └───────────┬───────────┘
+│ • Тревога в ntfy.sh при падении дома     │               │
+└──────────────────────────────────────────┘               ▼
+       │ MCP WebSocket                           ┌─────────────────────┐
+       ▼                                         │ logs/esp32_live.log │
+┌────────────────────────────────────────────────┴─────────────────────┐
+│ ДОМАШНИЙ ВЫЧИСЛИТЕЛЬНЫЙ УЗЕЛ (Windows 11, C:\XiaoZhi-PC)             │
 │                                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │  ФОНОВЫЙ МОСТ: mcp_pipe.py <---> pc_agent.py (31 инструмент)   │  │
-│  │  (Автозапуск через Планировщик задач: pythonw.exe)             │  │
-│  └────┬──────────────────┬──────────────────┬──────────────────┬──┘  │
-│       │                  │                  │                  │     │
-│       ▼                  ▼                  ▼                  ▼     │
-│  [БЕЗОПАСНОСТЬ]     [РАЗРАБОТКА]       [МУЛЬТИАГЕНТЫ]    [СИСТЕМА ПК]│
-│  • Фильтр команд    • VS Code (goto)   • Gemini 2.5 Pro   • Браузер  │
-│  • Аудит-лог JSONL  • Чтение кода      • Веб-поиск DDGS   • Буфер    │
-│  • ZIP-бэкапы       • Git Auto-Sync    • Озвучка ПК       • Сеть/Сон │
-└───────┼──────────────────┼──────────────────┼──────────────────┼─────┘
-        │                  │                  │                  │
-        ▼                  ▼                  ▼                  ▼
-┌───────────────────────────────┐  ┌───────────────────┐  ┌────────────┐
-│     DOCKER DESKTOP (WSL2)     │  │   СМАРТФОН И ЧАСЫ │  │  УМНЫЙ ДОМ │
-│                               │  │                   │  │  (Локально)│
-│ • xiaozhi-homeassistant:8123  │  │ • Poco F7 (ntfy)  │  │ • eWeLink  │
-│ • xiaozhi-docker-sandbox      │  │   Скриншоты/Файлы │  │ • MiHome   │
-│ • xiaozhi-idf-builder (ESP32) │  │ • Mi Band 10      │  │ • Tuya     │
-│ • xiaozhi-vpn-proxy (пауза)   │  │   (Вебхуки HA)    │  │ • Пылесос  │
-└───────────────────────────────┘  └───────────────────┘  └────────────┘
-``
+│  [bridge_watchdog.py] (Single-Instance Mutex, автозапуск Windows)    │
+│         │                                                            │
+│         ├──► [mcp_pipe.py] ──► [pc_agent.py] (35+ MCP-инструментов)  │
+│         │                           ├──► ИТ-СБГЭ (failover_power_grid)│
+│         │                           │     ├─ Ввод 1: ProxyAPI DeepSeek│
+│         │                           │     ├─ АВР -> Ввод 2: GPT-4o-m │
+│         │                           │     ├─ ИБП: ups_task_buffer    │
+│         │                           │     └─ ДГУ: Ollama johnny-local│
+│         │                           ├──► Аналитика (system_analytics) │
+│         │                           ├──► Умный дом (HA :8123)        │
+│         │                           └──► Телефон Poco F7 (ntfy.sh)   │
+│         │                                                            │
+│  [Docker Engine (WSL2, RSC/LSO Off, без гибернации)]                 │
+│         ├──► xiaozhi-homeassistant (Sonoff, Xiaomi Miot, Tuya)       │
+│         ├──► xiaozhi-docker-sandbox (Изолированный Python)           │
+│         └──► xiaozhi-idf-builder (Сборка прошивки ESP-IDF v5.3)      │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-## 2. Структура файлов и директорий (C:\XiaoZhi-PC)
+---
 
-``text
-C:\XiaoZhi-PC\
-├── .env                    # [СЕКРЕТЫ] Токены API, HA_TOKEN, PHONE_NTFY_TOPIC (защищен NTFS + .gitignore)
-├── .env.example            # Шаблон переменных окружения для GitHub
-├── .gitignore              # Жесткий фильтр исключения секретов, логов, бэкапов и SDK
-├── ARCHITECTURE.md         # Архитектурная схема и сводка инструментов
-├── README.md               # Документация проекта (выгружается на GitHub: fseven89/XiaoZhi-PC)
-├── Dockerfile              # Образ изолированной Python-песочницы
-├── docker-compose.yml      # Оркестрация контейнеров (sandbox, homeassistant, vpn, firmware)
-├── mcp_pipe.py             # Сетевой мост WebSocket <-> Stdio к облаку xiaozhi.me
-├── pc_agent.py             # Ядро системы: 31 MCP-инструмент, аудит, бэкапы и субагенты
-├── state.json              # Текущее состояние (активный режим: combat / companion / entertainment)
-│
-├── workspace\              # [ЛОКАЛЬНО] Рабочая папка для скриптов, игр и заметок (notes.md)
-├── logs\                   # [ЛОКАЛЬНО] Журнал действий (johnny_audit.jsonl) и логи платы (COM6)
-├── backups\                # [ЛОКАЛЬНО] Автоматические ZIP-снимки перед выполнением команд (20 шт.)
-├── ha-config\              # [ЛОКАЛЬНО] База и интеграции Home Assistant (Sonoff, Xiaomi, Tuya)
-├── vpn-config\             # [ЛОКАЛЬНО] Конфигурация шлюза sing-box (профиль vpn)
-├── firmware-backup\        # [ЛОКАЛЬНО] Заводской 16-МБ дамп колонки (factory_16mb_backup.bin)
-└── xiaozhi-esp32\          # [ЛОКАЛЬНО] Исходный код прошивки ESP32-S3 для кастомизации
-``
+## 2. Ключевые подсистемы и модули
 
-## 3. Сводка 31 инструмента Джонни по категориям
+1. **Диспетчер отказоустойчивости (`bridge_watchdog.py`):**
+   * Защищён системным мьютексом ядра Windows (`Global\XiaoZhi_Johnny_Watchdog_Lock`).
+   * Контролирует непрерывную работу моста `mcp_pipe.py` и сборщика логов `esp32_serial_logger.py`, отправляет пуш на телефон при старте и шлёт Heartbeat на будущую облачную VPS.
+2. **Ядро агента и безопасность (`pc_agent.py`):**
+   * Единый перехватчик `@mcp.tool()` логирует 100% вызовов в `logs/johnny_audit.jsonl`.
+   * Авто-цензор `_redact_secrets()` вырезает токены `.env` из всех логов и ответов.
+   * Строгий анти-галлюцинатор (`temperature 0.1` + запрет на додумывание системных фактов).
+3. **Каскад гарантированного выполнения задач (`failover_power_grid.py`):**
+   * Реализует энергетический принцип СБГЭ: буферизация задачи в ИБП (`ups_task_buffer.json`), основной Ввод №1 (`DeepSeek`), автоматический ввод резерва АВР на Ввод №2 (`GPT-4o-mini`), и запуск автономного ДГУ (`Ollama: johnny-local`) при потере интернета.
+4. **Аналитика и мониторинг (`system_analytics.py`):**
+   * Сводный аудит эффективности ИИ-вводов, частоты ошибок, здоровья памяти `SRAM` колонки ESP32-S3 и ресурсов хоста.
 
-1. **Режимы и Безопасность (4):** switch_assistant_mode, get_johnny_audit_log, create_manual_backup, ollback_last_backup.
-2. **Разработка и Git (6):** ead_project_file, write_workspace_file, launch_workspace_script, open_in_vscode, scode_open_file, git_sync_project.
-3. **Docker и Прошивка ESP32 (4):** manage_docker, docker_exec_sandbox, docker_build_firmware, capture_esp32_logs.
-4. **ИИ-субагенты и Поиск (3):** sk_coder_pro (Gemini 2.5 Pro), web_search_info (DDGS), search_workspace_docs.
-5. **Умный дом Home Assistant (2):** ha_list_devices, ha_control_device (гараж, аквариум Mijia, робот-пылесос).
-6. **Смартфон Poco F7 (2):** phone_send_ntfy (текст и скриншоты), phone_send_document (файлы).
-7. **Управление ПК и Аварийный пульт (11):** un_safe_powershell, get_pc_telemetry, open_website, clipboard_manager, scan_local_network, pc_power_control, emote_access_control (AnyDesk/RustDesk), system_self_heal, pc_get_weather, manage_notes, speak_johnny_pc.
+---
+
+## 3. Упущенные возможности и план модернизации (Roadmap v4.0+)
+
+* **[v4.0 — Прошивка ESP32-S3]:** Сборка в `xiaozhi-idf-builder` под плату `xingzhi-cube-1.54tft-wifi`, кастомное слово активации «Джонни» (`ESP-SR`), палитра LVGL Cyberpunk 2077, встроенная C++ подсистема `JohnnySubsystem` (BLE-радар Mi Band 10 / Poco F7, управление экраном, прямые вебхуки).
+* **[v4.0 — Живой голос]:** Замена стандартного синтезатора речи на нейросетевой офлайн-движок `Silero TTS` и клонирование голоса Ильи Бледного (`FishSpeech` / `F5-TTS`).
+* **[v4.1 — Умный маршрутизатор и RAG]:** Автоматическая классификация запросов (простые / приватные / сложные) и локальная векторная база знаний на ПК.
+* **[v4.2 — Инфраструктура]:** Шифрование ZIP-бэкапов (AES-256), перенос 24/7 ядра на облачную VPS (`CLOUD_DEPLOY.md`) или выделенный мини-ПК с OCuLink + аппаратный Mini-UPS 12V/5V на роутер и колонку.

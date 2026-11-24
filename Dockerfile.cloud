@@ -1,0 +1,9 @@
+# Copyright (c) 2026 Курчицикий М.С (fseven89). All rights reserved.
+FROM python:3.11-slim
+
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir fastmcp requests python-dotenv websockets ddgs
+
+COPY . /app
+CMD ["python", "cloud_sentinel.py"]

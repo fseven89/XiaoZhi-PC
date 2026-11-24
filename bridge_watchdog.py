@@ -10,6 +10,21 @@ mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\XiaoZhi_Johnny
 if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
     sys.exit(0)
 
+
+def send_cloud_heartbeat():
+    """Отправляет пульс на облачную VPS, если задан CLOUD_VPS_URL в .env (иначе спит без нагрузки)."""
+    try:
+        from dotenv import load_dotenv
+        import requests
+        load_dotenv(os.path.join(BASE_DIR, ".env"))
+        vps_url = os.getenv("CLOUD_VPS_URL", "").strip().rstrip("/")
+        if not vps_url:
+            return
+        secret = os.getenv("CLOUD_HEARTBEAT_SECRET", "johnny_sbge_2077").strip()
+        requests.post(f"{vps_url}/heartbeat", headers={"X-SBGE-Token": secret}, timeout=4)
+    except Exception:
+        pass
+
 def notify_startup():
     try:
         sys.path.insert(0, BASE_DIR)
@@ -28,7 +43,8 @@ def main():
             proc_pipe = subprocess.Popen([PYTHON_EXE, PIPE_SCRIPT], cwd=BASE_DIR)
         if proc_serial is None or proc_serial.poll() is not None:
             proc_serial = subprocess.Popen([PYTHON_EXE, SERIAL_SCRIPT], cwd=BASE_DIR)
-        time.sleep(10)
+        send_cloud_heartbeat()
+        time.sleep(15)
 
 if __name__ == "__main__":
     main()

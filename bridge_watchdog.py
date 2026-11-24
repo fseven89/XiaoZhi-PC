@@ -1,3 +1,4 @@
+# Copyright (c) 2026 Курчицикий М.С (fseven89). All rights reserved.
 import os, sys, time, subprocess, datetime, ctypes
 
 BASE_DIR = r"C:\XiaoZhi-PC"
@@ -6,16 +7,11 @@ PIPE_SCRIPT = os.path.join(BASE_DIR, "mcp_pipe.py")
 SERIAL_SCRIPT = os.path.join(BASE_DIR, "esp32_serial_logger.py")
 INBOX_SCRIPT = os.path.join(BASE_DIR, "ntfy_inbox_listener.py")
 
-# Системный мьютекс Windows: гарантирует, что работает строго ОДИН экземпляр Watchdog
 mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\XiaoZhi_Johnny_Watchdog_Lock")
-if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+if ctypes.windll.kernel32.GetLastError() == 183:
     sys.exit(0)
 
-
-def if proc_inbox is None or proc_inbox.poll() is not None:
-            proc_inbox = subprocess.Popen([PYTHON_EXE, INBOX_SCRIPT], cwd=BASE_DIR)
-        send_cloud_heartbeat():
-    """Отправляет пульс на облачную VPS, если задан CLOUD_VPS_URL в .env (иначе спит без нагрузки)."""
+def send_cloud_heartbeat():
     try:
         from dotenv import load_dotenv
         import requests
@@ -33,7 +29,7 @@ def notify_startup():
         sys.path.insert(0, BASE_DIR)
         import pc_agent
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        pc_agent.phone_send_ntfy(f"[{ts}] Мост Джонни (Single-Instance Watchdog) активен.", attach_screenshot=False)
+        pc_agent.phone_send_ntfy(f"[{ts}] Мост Джонни (Single-Instance Watchdog + Vision Inbox) активен.", attach_screenshot=False)
     except Exception:
         pass
 

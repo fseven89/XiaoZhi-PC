@@ -643,6 +643,17 @@ def ask_johnny_resilient(task_prompt: str) -> str:
     res = _sbge.execute_with_avr(task_prompt)
     return f"[{res['line']} | {res['ms']} мс]" + chr(10) + res['answer']
 
+# === МОДУЛЬ СВОДНОЙ АНАЛИТИКИ И МОНИТОРИНГА ===
+import system_analytics as _sys_analytics
+
+@mcp.tool()
+def get_full_analytics_dashboard(send_to_phone: bool = False) -> str:
+    """Формирует полную аналитику работы системы: статистику ИИ-моделей, переключения СБГЭ, здоровье SRAM платы ESP32-S3 и ресурсы ПК."""
+    report = _sys_analytics.build_analytics_report()
+    if send_to_phone:
+        phone_send_document("analytics_report.txt", report, "Аналитика XiaoZhi-PC")
+    return report
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
 

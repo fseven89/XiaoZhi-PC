@@ -122,7 +122,7 @@ def rollback_last_backup() -> str:
 FORBIDDEN_PATTERNS = [
     r"rm\s+-rf", r"del\s+/s", r"rmdir", r"remove-item.*-recurse",
     r"format-", r"stop-computer", r"restart-computer", r"reg\s+delete",
-    r"net\s+user", r"invoke-expression", r"\biex\b", r"\.env(?!\.example)",
+    r"net\s+user", r"invoke-expression", r"\biex\b", r"\.env(?!\.example)", r"xiaozhi-esp32.*-Recurse",
     r"bcdedit", r"diskpart", r"(^|\s)-e(nc|ncodedcommand)?(\s|$)", r"encodedcommand", r"frombase64string", r"downloadstring", r"pip\s+install", r"winget\s+install"
 ]
 
@@ -653,6 +653,72 @@ def get_full_analytics_dashboard(send_to_phone: bool = False) -> str:
     if send_to_phone:
         phone_send_document("analytics_report.txt", report, "Аналитика XiaoZhi-PC")
     return report
+
+
+# === МУЛЬТИМОДАЛЬНЫЙ АНАЛИЗ ФОТО И ФАЙЛОВ С ТЕЛЕФОНА (VISION + INBOX) ===
+import base64 as _b64, glob as _glob
+
+@mcp.tool()
+def analyze_latest_inbox_item(question: str = "Сделай подробный технический анализ этого фото или файла.") -> str:
+    """Находит самое свежее фото или файл, присланный с телефона в workspace/inbox, анализирует его (через Vision ИИ для фото или СБГЭ для текста) и возвращает разбор."""
+    inbox_dir = os.path.join(WORKSPACE_DIR, "inbox")
+    if not os.path.exists(inbox_dir):
+        return "Папка входящих workspace/inbox пока пуста. Отправь фото или файл в топик _in приложения ntfy на телефоне."
+    files = sorted([f for f in _glob.glob(os.path.join(inbox_dir, "*")) if os.path.isfile(f)], key=os.path.getmtime, reverse=True)
+    if not files:
+        return "Во входящих (workspace/inbox) пока нет новых файлов."
+    latest = files
+    fname = os.path.basename(latest)
+    ext = os.path.splitext(latest)[1].lower()
+
+    # Если это фотография -> отправляем в мультимодальную Vision-модель через ProxyAPI
+    if ext in (".jpg", ".jpeg", ".png", ".webp"):
+        api_key = os.getenv("LLM_API_KEY", "").strip()
+        if not api_key:
+            return "Для анализа фото нужен LLM_API_KEY в .env."
+        with open(latest, "rb") as img_f:
+            b64_img = _b64.b64encode(img_f.read()).decode("ascii")
+        mime = "image/png" if ext == ".png" else "image/jpeg"
+        url = "https://" + "api.proxyapi" + ".ru/v1/chat/completions"
+        resp = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": "openai/gpt-4o-mini",
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": f"Ты — точный технический эксперт и инженер. Проанализируй изображение ({fname}). Задача: {question}. Ответь строго по фактам на русском языке."},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64_img}"}}
+                    ]
+                }],
+                "temperature": 0.1
+            },
+            timeout=45
+        )
+        if not resp.ok:
+            return f"Ошибка Vision API ({resp.status_code}): {resp.text[:200]}"
+        idx_z = chr(91) + "0" + chr(93)
+        ans = eval(f'resp.json()["choices"]{idx_z}["message"]["content"]')
+        write_workspace_file("last_vision_analysis.md", f"# Анализ фото {fname}
+
+{ans}")
+        return f"[Анализ фото: {fname}]
+{ans}"
+
+    # Если это текстовый документ / код / лог -> прогоняем через щит ИТ-СБГЭ
+    with open(latest, "r", encoding="utf-8", errors="replace") as tf:
+        content = tf.read()[:12000]
+    res = _sbge.execute_with_avr(f"Файл: {fname}
+Задача: {question}
+
+Содержимое:
+{content}")
+    write_workspace_file("last_file_analysis.md", f"# Анализ файла {fname}
+
+{res['answer']}")
+    return f"[Анализ файла: {fname} | {res['line']}]
+{res['answer']}"
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

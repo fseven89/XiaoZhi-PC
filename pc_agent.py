@@ -628,6 +628,22 @@ def read_esp32_live_logs(lines: int = 40) -> str:
         tail = f.readlines()[-min(lines, 150):]
     return "".join(tail) if tail else "Лог пуст."
 
+
+# === КОНТУР ГАРАНТИРОВАННОГО ПИТАНИЯ ЗАДАЧ (ИТ-СБГЭ: АВР + ИБП + ДГУ) ===
+import failover_power_grid as _sbge
+
+@mcp.tool()
+def get_it_sbge_status() -> str:
+    """Показывает состояние всех линий резервирования ИТ-СБГЭ (Ввод 1, Ввод 2 АВР, буфер ИБП и локальный генератор Ollama)."""
+    return _sbge.get_sbge_telemetry()
+
+@mcp.tool()
+def ask_johnny_resilient(task_prompt: str) -> str:
+    """Выполняет задачу через каскад СБГЭ: ИБП (буфер) -> Ввод 1 -> АВР -> Ввод 2 -> ДГУ (локальная Ollama без интернета)."""
+    res = _sbge.execute_with_avr(task_prompt)
+    return f"[{res['line']} | {res['ms']} мс]
+{res['answer']}"
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
 

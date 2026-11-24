@@ -55,3 +55,5 @@
 - `cf8b963` (2026-11-24): Feat v3.99.7: implement IT-SBGE cascade failover (Input 1 -> Input 2 AVR -> UPS Buffer -> Local Generator Ollama)
 - `44ceee0` (2026-11-24): Fix v3.99.8: clean IT-SBGE f-string and choices index
 - `7cd7f04` (2026-11-24): Feat v3.99.9: add dormant Cloud VPS failover sentinel & heartbeat hook
+
+- `v4.0-rc5` (2026-11-24 21:24): Внедрены двусторонний шлюз с Poco F7 (`ntfy` + Telegram Bot через Cloudflare Worker + Wi-Fi :8787), мультимодальный Vision-анализатор фото и документов (`vision_inbox.py`), а также бесплатный облачный сторож СБГЭ 24/7 на базе Cloudflare Worker + KV + Cron Trigger (`/sbge-heartbeat`). Обновлена архитектура `ARCHITECTURE.md`.

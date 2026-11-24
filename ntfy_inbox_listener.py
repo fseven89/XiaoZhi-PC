@@ -92,20 +92,20 @@ def tg_reply(chat_id: int, text: str):
     except Exception:
         pass
 
-def tg_download_file(file_id: str, target_path: str) -> bool:
+def tg_download_file(file_id: str, target_path: str) -> tuple:
     try:
         r_info = requests.get(f"{TG_API_BASE}/bot{TG_TOKEN}/getFile?file_id={file_id}", timeout=15)
         if not r_info.ok:
-            return False
+            return False, f"getFile HTTP {r_info.status_code}: {r_info.text[:120]}"
         file_path = r_info.json()["result"]["file_path"]
         r_bin = requests.get(f"{TG_API_BASE}/file/bot{TG_TOKEN}/{file_path}", timeout=60)
         if r_bin.ok:
             with open(target_path, "wb") as f:
                 f.write(r_bin.content)
-            return True
-    except Exception:
-        pass
-    return False
+            return True, "OK"
+        return False, f"download HTTP {r_bin.status_code}"
+    except Exception as e:
+        return False, str(e)
 
 def telegram_loop():
     if not TG_TOKEN:
@@ -136,15 +136,21 @@ def telegram_loop():
                     best_photo = next(iter(reversed(msg["photo"])))
                     fname = f"{ts}_tg_photo.jpg"
                     fpath = os.path.join(INBOX_DIR, fname)
-                    if tg_download_file(best_photo["file_id"], fpath):
+                    ok_dl, err_dl = tg_download_file(best_photo["file_id"], fpath)
+                    if ok_dl:
                         tg_reply(chat_id, f"✅ Фото принято в inbox Джонни ({fname}). Скажи колонке: «Сделай анализ фото».")
+                    else:
+                        tg_reply(chat_id, f"❌ Ошибка загрузки фото: {err_dl}")
                 elif "document" in msg:
                     doc = msg["document"]
                     orig = doc.get("file_name", "document.bin")
                     fname = f"{ts}_{orig}"
                     fpath = os.path.join(INBOX_DIR, fname)
-                    if tg_download_file(doc["file_id"], fpath):
+                    ok_dl, err_dl = tg_download_file(doc["file_id"], fpath)
+                    if ok_dl:
                         tg_reply(chat_id, f"✅ Файл принят в inbox Джонни ({fname}).")
+                    else:
+                        tg_reply(chat_id, f"❌ Ошибка загрузки файла: {err_dl}")
                 elif "text" in msg:
                     txt = msg["text"]
                     if txt.strip() == "/start":

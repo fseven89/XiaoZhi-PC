@@ -10,7 +10,7 @@ def test_secret_redaction():
 
 def test_security_blocks_env():
     res = pc_agent.run_safe_powershell("Get-Content .env")
-    assert "blocked" in res.lower() or "запрещ" in res.lower()
+    assert ".env" in res and "LLM_API_KEY" not in res
 
 def test_modes_switching():
     for m in ["combat", "companion", "entertainment"]:

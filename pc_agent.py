@@ -139,10 +139,14 @@ MODES_CONFIG = {
 
 @mcp.tool()
 def switch_assistant_mode(mode: str) -> str:
-    """Р В РЎСџР В Р’ВµР РЋР вЂљР В Р’ВµР В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВ Р РЋР вЂљР В Р’В°Р В Р’В±Р В РЎвЂўР РЋРІР‚С™Р РЋРІР‚в„–: combat, companion, entertainment."""
-    mode = mode.lower().strip()
-    if mode not in MODES_CONFIG:
-        return "Р В РІР‚СњР В РЎвЂўР РЋР С“Р РЋРІР‚С™Р РЋРЎвЂњР В РЎвЂ”Р В Р вЂ¦Р РЋРІР‚в„– Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВР РЋРІР‚в„–: combat, companion, entertainment."
+    """Переключает режим работы Джонни: 'combat', 'companion' или 'entertainment'."""
+    m = mode.lower().strip()
+    if m not in ("combat", "companion", "entertainment"):
+        return "Доступные режимы: combat, companion, entertainment."
+    st = _load_state()
+    st["mode"] = m
+    _save_state(st)
+    return f"Active mode switched to: {m}."
     state = _load_state()
     state["mode"] = mode
     _save_state(state)

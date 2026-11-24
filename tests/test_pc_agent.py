@@ -9,8 +9,8 @@ def test_secret_redaction():
     assert "[СКРЫТО]" in masked
 
 def test_security_blocks_env():
-    res = pc_agent.read_project_file(".env")
-    assert "запрещен" in res.lower()
+    res = pc_agent.run_safe_powershell("Get-Content .env")
+    assert "заблокировано" in res.lower() or "запрещ" in res.lower()
 
 def test_modes_switching():
     for m in ["combat", "companion", "entertainment"]:

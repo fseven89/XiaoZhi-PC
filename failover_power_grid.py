@@ -66,7 +66,7 @@ def execute_with_avr(prompt: str, sys_prompt: str = "Ты — точный те�
                 timeout=25
             )
             if r1.ok:
-                ans = r1.json()["choices"]["message"]["content"].strip()
+                ans = r1.json()["choices"][0]["message"]["content"].strip()
                 ms = int((time.time() - t0) * 1000)
                 _save_ups_buffer(task_id, prompt, "DONE_INPUT_1")
                 _log_sbge("NORMAL_RUN", "INPUT_1_DEEPSEEK", "Выполнено по основному вводу", ms)
@@ -88,7 +88,7 @@ def execute_with_avr(prompt: str, sys_prompt: str = "Ты — точный те�
                 timeout=25
             )
             if r2.ok:
-                ans = r2.json()["choices"]["message"]["content"].strip()
+                ans = r2.json()["choices"][0]["message"]["content"].strip()
                 ms = int((time.time() - t1) * 1000)
                 _save_ups_buffer(task_id, prompt, "DONE_INPUT_2_AVR")
                 _log_sbge("AVR_FAILOVER_OK", "INPUT_2_GPT4O_MINI", "АВР успешно переключил на Ввод №2", ms)

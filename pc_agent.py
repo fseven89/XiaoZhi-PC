@@ -641,8 +641,7 @@ def get_it_sbge_status() -> str:
 def ask_johnny_resilient(task_prompt: str) -> str:
     """Выполняет задачу через каскад СБГЭ: ИБП (буфер) -> Ввод 1 -> АВР -> Ввод 2 -> ДГУ (локальная Ollama без интернета)."""
     res = _sbge.execute_with_avr(task_prompt)
-    return f"[{res['line']} | {res['ms']} мс]
-{res['answer']}"
+    return f"[{res['line']} | {res['ms']} мс]" + chr(10) + res['answer']
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

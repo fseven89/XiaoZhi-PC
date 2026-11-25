@@ -17,6 +17,12 @@ while True:
         time.sleep(2)
         continue
     try:
+        # === XIAOZHI ARMOR: COM6 PAUSE HOOK ===
+        import time as _ptime
+        from pathlib import Path as _PPath
+        while _PPath(r"C:\XiaoZhi-PC\logs\pause_com6.flag").exists():
+            _ptime.sleep(1.0)
+        # === END COM6 PAUSE HOOK ===
         with serial.Serial("COM6", 115200, timeout=1) as ser:
             with open(LOG_FILE, "a", encoding="utf-8", errors="replace") as lf:
                 lf.write(f"\n=== [{datetime.datetime.now().isoformat(timespec='seconds')}] Подключено к COM6 ===\n")

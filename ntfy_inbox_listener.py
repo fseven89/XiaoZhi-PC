@@ -88,13 +88,13 @@ def tg_reply(chat_id: int, text: str):
     if not TG_TOKEN:
         return
     try:
-        requests.post(f"{TG_API_BASE}/bot{TG_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": text}, timeout=10)
+        requests.post(f"{TG_API_BASE}/bot{TG_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": text}, timeout=45)
     except Exception:
         pass
 
 def tg_download_file(file_id: str, target_path: str) -> tuple:
     try:
-        r_info = requests.get(f"{TG_API_BASE}/bot{TG_TOKEN}/getFile?file_id={file_id}", timeout=15)
+        r_info = requests.get(f"{TG_API_BASE}/bot{TG_TOKEN}/getFile?file_id={file_id}", timeout=45)
         if not r_info.ok:
             return False, f"getFile HTTP {r_info.status_code}: {r_info.text[:120]}"
         file_path = r_info.json()["result"]["file_path"]

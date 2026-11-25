@@ -24,3 +24,21 @@ def test_workspace_file_cycle():
     tmp_p = os.path.join(pc_agent.WORKSPACE_DIR, "_pytest_tmp.txt")
     assert os.path.exists(tmp_p)
     os.remove(tmp_p)
+
+def test_phone_send_document_cyrillic_filename(monkeypatch):
+    import pc_agent
+    captured = {}
+
+    class DummyResp:
+        ok = True
+        status_code = 200
+
+    def fake_put(url, data, headers, timeout):
+        captured["headers"] = headers
+        return DummyResp()
+
+    monkeypatch.setenv("PHONE_NTFY_TOPIC", "test_topic_123")
+    monkeypatch.setattr(pc_agent.requests, "put", fake_put)
+    res = pc_agent.phone_send_document("Отчёт_Джонни.md", "Привет мир")
+    assert "успешно отправлен" in res
+    captured["headers"]["Filename"].encode("latin-1")

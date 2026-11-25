@@ -17,6 +17,9 @@ AUDIT_FILE = os.path.join(LOGS_DIR, "johnny_audit.jsonl")
 for d in (WORKSPACE_DIR, LOGS_DIR, BACKUPS_DIR):
     os.makedirs(d, exist_ok=True)
 
+from redline_guard import RedLineGuard
+_REDLINE = RedLineGuard(ttl_seconds=90)
+
 mcp = MCPServer("Johnny-Silverhand-Hub-v3")
 
 def _load_state() -> dict:
@@ -121,7 +124,7 @@ def rollback_last_backup() -> str:
 
 FORBIDDEN_PATTERNS = [
     r"rm\s+-rf", r"del\s+/s", r"rmdir", r"remove-item.*-recurse",
-    r"format-", r"stop-computer", r"restart-computer", r"reg\s+delete",
+    r"stop-computer", r"restart-computer", r"reg\s+delete",
     r"net\s+user", r"invoke-expression", r"\biex\b", r"\.env(?!\.example)", r"xiaozhi-esp32.*-Recurse",
     r"bcdedit", r"diskpart", r"(^|\s)-e(nc|ncodedcommand)?(\s|$)", r"encodedcommand", r"frombase64string", r"downloadstring", r"pip\s+install", r"winget\s+install"
 ]
@@ -148,7 +151,9 @@ def switch_assistant_mode(mode: str) -> str:
     st = _load_state()
     st["mode"] = m
     _save_state(st)
-    return f"Active mode switched to: {m}."
+    res = f"Active mode switched to: {m} ({MODES_CONFIG[m]['name']})."
+    _log_event("switch_assistant_mode", {"mode": m}, res)
+    return res
     state = _load_state()
     state["mode"] = mode
     _save_state(state)
@@ -159,13 +164,22 @@ def switch_assistant_mode(mode: str) -> str:
 @mcp.tool()
 def run_safe_powershell(command: str) -> str:
     """Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р В Р’В±Р В Р’ВµР В Р’В·Р В РЎвЂўР В РЎвЂ”Р В Р’В°Р РЋР С“Р В Р вЂ¦Р РЋРЎвЂњР РЋР вЂ№ Р В РЎвЂќР В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РўвЂР РЋРЎвЂњ PowerShell Р РЋР С“ Р В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р вЂ Р В Р’В°Р РЋР вЂљР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В РЎВ Р В Р’В°Р В Р вЂ Р РЋРІР‚С™Р В РЎвЂў-Р В Р’В±Р РЋР РЉР В РЎвЂќР В Р’В°Р В РЎвЂ”Р В РЎвЂўР В РЎВ."""
+    rl_status, rl_reason, rl_code = _REDLINE.analyze_command(command)
+    if rl_status == "DLP_BLOCK":
+        _log_event("run_safe_powershell_DLP_BLOCK", {"command": "[REDACTED]"}, rl_reason)
+        return f"DLP-БЛОКИРОВКА: {rl_reason}"
+    if rl_status == "POINT_OF_NO_RETURN":
+        _log_event("run_safe_powershell_REDLINE", {"command": command, "code": rl_code}, rl_reason)
+        return f"ТОЧКА НЕВОЗВРАТА! Риск: {rl_reason}. Для принудительного выполнения назови код подтверждения: {rl_code} (действует 90 сек)."
     is_safe, reason = _is_command_safe(command)
     if not is_safe:
         _log_event("run_safe_powershell_BLOCKED", {"command": command}, reason)
         return reason
-    bkp_name = _create_auto_backup("pre_ps")
+    is_mutating = any(w in command.lower() for w in ["set-content", "out-file", "remove-item", "move-item", "copy-item", "new-item", "del ", "rm ", "docker ", "git ", ">"])
+    bkp_name = _create_auto_backup("pre_ps") if is_mutating else "skipped_readonly"
     try:
-        result = subprocess.run(["powershell", "-NoProfile", "-Command", command], cwd=WORKSPACE_DIR, capture_output=True, text=True, encoding="cp866", timeout=20)
+        utf8_cmd = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " + command
+        result = subprocess.run(["powershell", "-NoProfile", "-Command", utf8_cmd], cwd=WORKSPACE_DIR, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
         out = result.stdout.strip() if result.returncode == 0 else result.stderr.strip()
         res = out if out else "Р В РЎв„ўР В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РўвЂР В Р’В° Р В Р вЂ Р РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В Р’В°."
     except Exception as e:
@@ -231,7 +245,7 @@ def search_workspace_docs(query: str) -> str:
                     with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
                         for idx, line in enumerate(f, 1):
                             if q in line.lower():
-                                matches.append(f"{fname} (Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљ. {idx}): {line.strip()[:120]}")
+                                matches.append(f"{fname} (РЎРѓРЎвЂљРЎР‚. {idx}): {line.strip()[:120]}")
                 except Exception:
                     pass
     res = "\n".join(matches[:15]) if matches else f"Р В Р Р‹Р В РЎвЂўР В Р вЂ Р В РЎвЂ”Р В Р’В°Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР В РІвЂћвЂ“ Р В РЎвЂ”Р В РЎвЂў Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР РЋР С“Р РЋРЎвЂњ '{query}' Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂў."
@@ -241,6 +255,10 @@ def search_workspace_docs(query: str) -> str:
 @mcp.tool()
 def phone_send_ntfy(message: str, attach_screenshot: bool = False) -> str:
     """Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋР С“Р РЋРІР‚С™ Р В РЎвЂР В Р’В»Р В РЎвЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР В РЎвЂР В Р вЂ¦Р РЋРІвЂљВ¬Р В РЎвЂўР РЋРІР‚С™ Р РЋР РЉР В РЎвЂќР РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’В° Р В РЎСџР В РЎв„ў Р В Р вЂ¦Р В Р’В° Р РЋРІР‚С™Р В Р’ВµР В Р’В»Р В Р’ВµР РЋРІР‚С›Р В РЎвЂўР В Р вЂ¦ Р РЋРІР‚РЋР В Р’ВµР РЋР вЂљР В Р’ВµР В Р’В· ntfy.sh."""
+    dlp_ok, dlp_msg = _REDLINE.analyze_outbound_text(message)
+    if not dlp_ok:
+        _log_event("phone_send_ntfy_DLP_BLOCK", {}, dlp_msg)
+        return dlp_msg
     topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
     if not topic:
         return "Р В РЎв„ўР В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В» ntfy Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В Р’ВµР В Р вЂ¦ Р В Р вЂ  .env."
@@ -267,7 +285,7 @@ def phone_send_ntfy(message: str, attach_screenshot: bool = False) -> str:
 def pc_get_weather(city: str = "") -> str:
     """Р В РЎСџР В РЎвЂўР В Р’В»Р РЋРЎвЂњР РЋРІР‚РЋР В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋРЎвЂњР РЋРІР‚В°Р РЋРЎвЂњР РЋР вЂ№ Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРЎвЂњ Р В Р’В±Р В Р’ВµР В Р’В· API-Р В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В РІвЂћвЂ“."""
     target = city.strip() if city.strip() else os.getenv("DEFAULT_CITY", "Saint-Petersburg")
-    url = "https://" + "wttr.in" + f"/{target}?format=3Р Р†Р Р‰Р’В©=ru"
+    url = "https://" + "wttr.in" + f"/{target}?format=3РІРЉВ©=ru"
     try:
         r = requests.get(url, timeout=8)
         res = r.text.strip() if r.ok else f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРІР‚в„–: {r.status_code}"
@@ -380,7 +398,7 @@ def launch_workspace_script(filename: str) -> str:
     if not os.path.exists(target_path):
         return f"Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» {safe_name} Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦ Р В Р вЂ  workspace."
     try:
-        subprocess.Popen([r"C:\Python315\python.exe", target_path], cwd=WORKSPACE_DIR, creationflags=subprocess.CREATE_NEW_CONSOLE)
+        subprocess.Popen([__import__("sys").executable, target_path], cwd=WORKSPACE_DIR, creationflags=subprocess.CREATE_NEW_CONSOLE)
         res = f"Р В Р Р‹Р В РЎвЂќР РЋР вЂљР В РЎвЂР В РЎвЂ”Р РЋРІР‚С™ {safe_name} Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋРЎвЂњР РЋРІР‚В°Р В Р’ВµР В Р вЂ¦ Р В Р вЂ  Р В РЎвЂўР РЋРІР‚С™Р В РўвЂР В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р В РЎвЂўР В РЎВ Р В РЎвЂўР В РЎвЂќР В Р вЂ¦Р В Р’Вµ."
     except Exception as e:
         res = f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋРЎвЂњР РЋР С“Р В РЎвЂќР В Р’В°: {str(e)}"
@@ -393,10 +411,10 @@ def open_website(target: str) -> str:
     """Открывает сайт в браузере Windows. Поддерживает имена ('youtube', 'yandex', 'github', 'ha', 'xiaozhi') или полный URL."""
     import webbrowser
     aliases = {
-        "youtube": "https://" + "://youtube.com",
+        "youtube": "https://youtube.com",
         "yandex": "https://" + "ya.ru",
         "music": "https://" + "music.yandex.ru",
-        "github": "https://" + "://github.com",
+        "github": "https://github.com",
         "ha": "http://" + "127.0.0.1:8123",
         "xiaozhi": "https://" + "xiaozhi.me"
     }
@@ -539,14 +557,21 @@ def phone_send_document(filename: str, content: str, caption: str = "Файл о
     topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
     if not topic:
         return "Канал ntfy не настроен в .env."
+    dlp_ok, dlp_msg = _REDLINE.analyze_outbound_text(content)
+    if not dlp_ok:
+        _log_event("phone_send_document_DLP_BLOCK", {"filename": filename}, dlp_msg)
+        return dlp_msg
     safe_name = os.path.basename(filename) or "note.txt"
     from urllib.parse import quote
     ntfy_url = "https://" + "ntfy.sh" + f"/{topic}?message={quote(caption)}"
     try:
+        ascii_name = safe_name.encode("ascii", "ignore").decode("ascii").strip("._ ") or "johnny_note.txt"
+        if ascii_name.startswith("."):
+            ascii_name = "johnny_file" + ascii_name
         resp = requests.put(
             ntfy_url,
             data=content.encode("utf-8"),
-            headers={"Filename": safe_name, "Title": f"Johnny File: {safe_name}"},
+            headers={"Filename": ascii_name, "Title": f"Johnny File: {ascii_name}"},
             timeout=15
         )
         res = f"Файл '{safe_name}' успешно отправлен на телефон." if resp.ok else f"Ошибка ntfy: {resp.status_code}"
@@ -662,6 +687,110 @@ import vision_inbox as _vision_inbox
 def analyze_latest_inbox_item(question: str = 'Сделай подробный технический анализ этого фото или файла.') -> str:
     """Анализирует самое свежее фото или файл, присланный с телефона в workspace/inbox."""
     return _vision_inbox.analyze_latest(question)
+
+
+# === ТОЧКА НЕВОЗВРАТА И ТОЧНОЕ УПРАВЛЕНИЕ ГРОМКОСТЬЮ (V4.0) ===
+@mcp.tool()
+def confirm_redline_action(code: str) -> str:
+    """Подтверждает и выполняет ранее заблокированную команду точки невозврата по 4-значному коду."""
+    cmd = _REDLINE.verify_confirmation(code)
+    if not cmd:
+        return "Неверный или просроченный код подтверждения точки невозврата."
+    bkp_name = _create_auto_backup("redline_confirmed")
+    try:
+        result = subprocess.run(["powershell", "-NoProfile", "-Command", cmd], cwd=WORKSPACE_DIR, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
+        out = result.stdout.strip() if result.returncode == 0 else result.stderr.strip()
+        res = out if out else "Команда точки невозврата выполнена."
+    except Exception as e:
+        res = f"Ошибка выполнения: {str(e)}"
+    _log_event("confirm_redline_action", {"code": code, "backup": bkp_name}, res)
+    return res
+
+@mcp.tool()
+def set_system_volume_percent(percent: int = 10) -> str:
+    """Устанавливает системную громкость Windows точно на заданный процент (0-100) через нативный CoreAudio API."""
+    lvl = max(0, min(100, int(percent)))
+    ps_script = f"""
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioEndpointVolume {{
+    int RegisterControlChangeNotify(IntPtr pNotify);
+    int UnregisterControlChangeNotify(IntPtr pNotify);
+    int GetChannelCount(out uint pnChannelCount);
+    int SetMasterVolumeLevel(float fLevelDB, Guid pguidEventContext);
+    int SetMasterVolumeLevelScalar(float fLevel, Guid pguidEventContext);
+    int GetMasterVolumeLevel(out float pfLevelDB);
+    int GetMasterVolumeLevelScalar(out float pfLevel);
+}}
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDevice {{
+    int Activate(ref Guid iid, int dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
+}}
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceEnumerator {{
+    int EnumAudioEndpoints(int dataFlow, int dwStateMask, out IntPtr ppDevices);
+    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice ppEndpoint);
+}}
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumerator {{}}
+public class CoreAudioVol {{
+    public static void Set(float val) {{
+        var enumerator = new MMDeviceEnumerator() as IMMDeviceEnumerator;
+        IMMDevice dev;
+        enumerator.GetDefaultAudioEndpoint(0, 1, out dev);
+        Guid iid = typeof(IAudioEndpointVolume).GUID;
+        object o;
+        dev.Activate(ref iid, 1, IntPtr.Zero, out o);
+        var epv = (IAudioEndpointVolume)o;
+        epv.SetMasterVolumeLevelScalar(val, Guid.Empty);
+    }}
+}}
+"@ -ErrorAction SilentlyContinue
+[CoreAudioVol]::Set({lvl / 100.0})
+Write-Output "OK:{lvl}"
+"""
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15)
+        res = f"Громкость Windows установлена точно на {lvl}%." if r.returncode == 0 else f"Ошибка CoreAudio: {r.stderr.strip()}"
+    except Exception as e:
+        res = f"Сбой управления громкостью: {str(e)}"
+    _log_event("set_system_volume_percent", {"percent": lvl}, res)
+    return res
+
+
+# === МОДУЛЬ САМООБУЧЕНИЯ И КОНТРОЛЯ ЭНЕРГОЭФФЕКТИВНОСТИ (V4.0) ===
+import self_learning_engine as _sle
+
+@mcp.tool()
+def run_self_reflection() -> str:
+    """Анализирует свежие логи и сбои системы, пополняя базу усвоенных уроков Джонни."""
+    res = _sle.analyze_logs_and_learn()
+    _log_event("run_self_reflection", {}, res)
+    return res
+
+@mcp.tool()
+def get_learned_lessons(limit: int = 8) -> str:
+    """Показывает список усвоенных уроков и правил предотвращения ошибок."""
+    return _sle.format_lessons_summary(limit=limit)
+
+@mcp.tool()
+def check_laptop_power_eco(threshold_percent: int = 25) -> str:
+    """Проверяет заряд батареи ноутбука и активирует энергосберегающий контур при разряде."""
+    st = _sle.check_battery_and_eco_state(threshold_percent=threshold_percent)
+    if st.get("eco_triggered"):
+        try:
+            phone_send_ntfy(f"ВНИМАНИЕ: Ноутбук на батарее ({st['percent']}%). Перевожу Джонни в энергосберегающий режим.")
+        except Exception:
+            pass
+    _log_event("check_laptop_power_eco", {"threshold": threshold_percent}, st["status"])
+    return st["status"]
+
+def _speak_offline_windows_sapi(text: str) -> str:
+    clean_txt = text.replace('"', ' ').replace("'", " ").replace("`", " ").strip()
+    ps_tts = f'Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate = 1; $s.Speak("{clean_txt}");'
+    r = subprocess.run(["powershell", "-NoProfile", "-Command", ps_tts], capture_output=True, text=True, timeout=30)
+    return "Озвучено локальным голосовым синтезатором ПК." if r.returncode == 0 else f"Ошибка SAPI: {r.stderr.strip()}"
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

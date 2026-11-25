@@ -1,3 +1,18 @@
+# === XIAOZHI ARMOR: KERNEL ATOMIC LOCK ===
+import os as _os, sys as _sys, msvcrt as _msvcrt
+from pathlib import Path as _Path
+
+_LOCK_PATH = _Path(r"C:\XiaoZhi-PC\logs\watchdog.lock")
+_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+_LOCK_FH = open(_LOCK_PATH, "w")
+try:
+    _msvcrt.locking(_LOCK_FH.fileno(), _msvcrt.LK_NBLCK, 1)
+    _LOCK_FH.write(str(_os.getpid()))
+    _LOCK_FH.flush()
+except OSError:
+    _sys.exit(0)
+# === END KERNEL ATOMIC LOCK ===
+
 # Copyright (c) 2026 Курчицикий М.С (fseven89). All rights reserved.
 import os, sys, time, subprocess, datetime, ctypes
 

@@ -543,6 +543,23 @@ def ask_coder_pro(task_description: str, save_to_filename: str = "") -> str:
 # === ГЛУБОКИЙ АНАЛИТИК ПРОЕКТА (ДЕЛЕГИРОВАНИЕ В GEMINI 2.5 PRO) ===
 
 @mcp.tool()
+
+def _gather_live_project_context() -> str:
+    nl = chr(10)
+    parts = []
+    for doc in ["HARDWARE_PASSPORT.md", "ARCHITECTURE.md"]:
+        p = os.path.join(BASE_DIR, doc)
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                parts.append(f"=== {doc} ===" + nl + f.read()[:3500])
+    live_log = os.path.join(LOGS_DIR, "esp32_live.log")
+    if os.path.exists(live_log):
+        with open(live_log, "r", encoding="utf-8", errors="ignore") as lf:
+            tail = lf.readlines()[-25:]
+            parts.append("=== ????? ??? ESP32-S3 (esp32_live.log) ===" + nl + "".join(tail))
+    return (nl + nl).join(parts)
+
+
 def delegate_deep_task(goal: str, output_filename: str = "report.md", send_to_phone: bool = True) -> str:
     """Передает сложную аналитическую или творческую задачу модели Gemini 2.5 Pro с автоматическим сбором контекста проекта."""
     nl = chr(10)
@@ -552,7 +569,8 @@ def delegate_deep_task(goal: str, output_filename: str = "report.md", send_to_ph
         context_parts.append("=== ИСТОРИЯ КОММИТОВ GIT ===" + nl + git_log)
     except Exception:
         pass
-    for doc in ["README.md", "ARCHITECTURE.md"]:
+    context_parts.append(_gather_live_project_context())
+    for doc in ["README.md"]:
         p = os.path.join(BASE_DIR, doc)
         if os.path.exists(p):
             with open(p, "r", encoding="utf-8", errors="ignore") as df:

@@ -14,7 +14,7 @@ except OSError:
 # === END KERNEL ATOMIC LOCK ===
 
 # Copyright (c) 2026 Курчицикий М.С (fseven89). All rights reserved.
-import os, sys, time, subprocess, datetime, ctypes
+import os, sys, time, subprocess, datetime, ctypes, shutil
 
 BASE_DIR = r"C:\XiaoZhi-PC"
 PYTHON_EXE = os.path.join(BASE_DIR, "venv", "Scripts", "pythonw.exe")
@@ -25,6 +25,37 @@ INBOX_SCRIPT = os.path.join(BASE_DIR, "ntfy_inbox_listener.py")
 mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\XiaoZhi_Johnny_Watchdog_Lock")
 if ctypes.windll.kernel32.GetLastError() == 183:
     sys.exit(0)
+
+
+def ensure_ollama_running():
+    """Проверяет доступность локального сервера Ollama (11434) и поднимает его при падении."""
+    try:
+        import urllib.request
+        with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=2) as resp:
+            if resp.status == 200:
+                return
+    except Exception:
+        pass
+
+    ollama_bin = shutil.which("ollama")
+    if not ollama_bin:
+        local_app = os.getenv("LOCALAPPDATA", "")
+        candidate = os.path.join(local_app, "Programs", "Ollama", "ollama.exe")
+        if os.path.exists(candidate):
+            ollama_bin = candidate
+
+    if ollama_bin:
+        try:
+            creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+            subprocess.Popen(
+                [ollama_bin, "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creation_flags
+            )
+        except Exception:
+            pass
+
 
 def send_cloud_heartbeat():
     try:
@@ -39,21 +70,28 @@ def send_cloud_heartbeat():
     except Exception:
         pass
 
+
 def notify_startup():
     try:
         sys.path.insert(0, BASE_DIR)
         import pc_agent
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        pc_agent.phone_send_ntfy(f"[{ts}] Мост Джонни (Single-Instance Watchdog + Vision Inbox) активен.", attach_screenshot=False)
+        pc_agent.phone_send_ntfy(
+            f"[{ts}] Мост Джонни (Watchdog + Ollama Auto-Heal + Vision Inbox) активен.",
+            attach_screenshot=False
+        )
     except Exception:
         pass
 
+
 def main():
+    ensure_ollama_running()
     notify_startup()
     proc_pipe = None
     proc_serial = None
     proc_inbox = None
     while True:
+        ensure_ollama_running()
         if proc_pipe is None or proc_pipe.poll() is not None:
             proc_pipe = subprocess.Popen([PYTHON_EXE, PIPE_SCRIPT], cwd=BASE_DIR)
         if proc_serial is None or proc_serial.poll() is not None:
@@ -62,6 +100,7 @@ def main():
             proc_inbox = subprocess.Popen([PYTHON_EXE, INBOX_SCRIPT], cwd=BASE_DIR)
         send_cloud_heartbeat()
         time.sleep(15)
+
 
 if __name__ == "__main__":
     main()

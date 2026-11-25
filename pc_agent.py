@@ -22,6 +22,35 @@ _REDLINE = RedLineGuard(ttl_seconds=90)
 
 mcp = MCPServer("Johnny-Silverhand-Hub-v3")
 
+import base64 as _b64
+
+def _encode_rfc2047(text: str) -> str:
+    b64 = _b64.b64encode(text.encode("utf-8")).decode("ascii")
+    return f"=?utf-8?b?{b64}?="
+
+def _transliterate_filename(name: str) -> str:
+    ru_map = {
+        "?": "a", "?": "b", "?": "v", "?": "g", "?": "d", "?": "e", "?": "yo",
+        "?": "zh", "?": "z", "?": "i", "?": "y", "?": "k", "?": "l", "?": "m",
+        "?": "n", "?": "o", "?": "p", "?": "r", "?": "s", "?": "t", "?": "u",
+        "?": "f", "?": "kh", "?": "ts", "?": "ch", "?": "sh", "?": "shch",
+        "?": "", "?": "y", "?": "", "?": "e", "?": "yu", "?": "ya"
+    }
+    out = []
+    for ch in name:
+        low = ch.lower()
+        if low in ru_map:
+            tr = ru_map[low]
+            out.append(tr.capitalize() if ch.isupper() else tr)
+        elif ch.isascii() and (ch.isalnum() or ch in "._-"):
+            out.append(ch)
+        else:
+            out.append("_")
+    cleaned = re.sub(r"_+", "_", "".join(out)).strip("._ ")
+    if not cleaned:
+        return "johnny_file.txt"
+    return "johnny_file" + cleaned if cleaned.startswith(".") else cleaned
+
 def _load_state() -> dict:
     if os.path.exists(STATE_FILE):
         try:
@@ -154,12 +183,6 @@ def switch_assistant_mode(mode: str) -> str:
     res = f"Active mode switched to: {m} ({MODES_CONFIG[m]['name']})."
     _log_event("switch_assistant_mode", {"mode": m}, res)
     return res
-    state = _load_state()
-    state["mode"] = mode
-    _save_state(state)
-    res = f"Р В РЎвЂ™Р В РЎвЂќР РЋРІР‚С™Р В РЎвЂР В Р вЂ Р В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р В Р вЂ¦ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РЎвЂР В РЎВ: {MODES_CONFIG[mode]['name']}."
-    _log_event("switch_assistant_mode", {"mode": mode}, res)
-    return res
 
 @mcp.tool()
 def run_safe_powershell(command: str) -> str:
@@ -285,7 +308,7 @@ def phone_send_ntfy(message: str, attach_screenshot: bool = False) -> str:
 def pc_get_weather(city: str = "") -> str:
     """Р В РЎСџР В РЎвЂўР В Р’В»Р РЋРЎвЂњР РЋРІР‚РЋР В Р’В°Р В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋРЎвЂњР РЋРІР‚В°Р РЋРЎвЂњР РЋР вЂ№ Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРЎвЂњ Р В Р’В±Р В Р’ВµР В Р’В· API-Р В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В РІвЂћвЂ“."""
     target = city.strip() if city.strip() else os.getenv("DEFAULT_CITY", "Saint-Petersburg")
-    url = "https://" + "wttr.in" + f"/{target}?format=3РІРЉВ©=ru"
+    url = "https://" + "wttr.in" + f"/{target}?format=3&lang=ru"
     try:
         r = requests.get(url, timeout=8)
         res = r.text.strip() if r.ok else f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂўР В РўвЂР РЋРІР‚в„–: {r.status_code}"
@@ -565,13 +588,14 @@ def phone_send_document(filename: str, content: str, caption: str = "Файл о
     from urllib.parse import quote
     ntfy_url = "https://" + "ntfy.sh" + f"/{topic}?message={quote(caption)}"
     try:
-        ascii_name = safe_name.encode("ascii", "ignore").decode("ascii").strip("._ ") or "johnny_note.txt"
-        if ascii_name.startswith("."):
-            ascii_name = "johnny_file" + ascii_name
+        ascii_name = _transliterate_filename(safe_name)
         resp = requests.put(
             ntfy_url,
             data=content.encode("utf-8"),
-            headers={"Filename": ascii_name, "Title": f"Johnny File: {ascii_name}"},
+            headers={
+                "Filename": ascii_name,
+                "Title": _encode_rfc2047(f"Johnny File: {safe_name}")
+            },
             timeout=15
         )
         res = f"Файл '{safe_name}' успешно отправлен на телефон." if resp.ok else f"Ошибка ntfy: {resp.status_code}"
@@ -794,7 +818,6 @@ def _speak_offline_windows_sapi(text: str) -> str:
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")
-
 
 
 

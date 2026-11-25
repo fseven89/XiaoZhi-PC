@@ -1,6 +1,6 @@
-﻿param(
+param(
     [int]$Port = 8090,
-    [int]$TimeoutSec = 45
+    [int]$TimeoutSec = 120
 )
 
 $root = "C:\XiaoZhi-PC"
@@ -32,7 +32,7 @@ $pyServer = Join-Path $env:TEMP "xz_ota_http.py"
 import http.server, socketserver, threading, time, os
 os.chdir(r"$fwDir\build")
 handler = http.server.SimpleHTTPRequestHandler
-httpd = socketserver.TCPServer(("0.0.0.0", $Port), handler)
+httpd = socketserver.ThreadingTCPServer(("0.0.0.0", $Port), handler)
 t = threading.Thread(target=httpd.serve_forever, daemon=True)
 t.start()
 time.sleep($TimeoutSec)

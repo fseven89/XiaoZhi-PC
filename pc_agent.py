@@ -5,7 +5,9 @@ import psutil, requests, mss, serial, serial.tools.list_ports
 from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
 
-load_dotenv(r"C:\XiaoZhi-PC\.env")
+import dpapi_vault as _dpapi_vault
+_dpapi_vault.load_dpapi_into_environ()
+load_dotenv(r"C:\XiaoZhi-PC\.env", override=False)
 
 BASE_DIR = r"C:\XiaoZhi-PC"
 STATE_FILE = os.path.join(BASE_DIR, "state.json")
@@ -809,6 +811,34 @@ def check_laptop_power_eco(threshold_percent: int = 25) -> str:
             pass
     _log_event("check_laptop_power_eco", {"threshold": threshold_percent}, st["status"])
     return st["status"]
+
+
+@mcp.tool()
+def speak_johnny_voice(text: str, speaker: str = "eugene") -> str:
+    """?????????? ????? ????????? ????? ??????? Silero TTS v4_ru (eugene/aidar) ????? ???????? ?? ? ???????? ?? Windows SAPI."""
+    clean_txt = text.strip()
+    if not clean_txt:
+        return "?????? ????? ??? ???????."
+    try:
+        import io, sounddevice as sd, scipy.io.wavfile as wavfile
+        resp = requests.post(
+            "http://localhost:8010/tts",
+            json={"text": clean_txt, "speaker": speaker, "sample_rate": 24000},
+            timeout=15
+        )
+        if resp.ok and resp.content:
+            sr, data = wavfile.read(io.BytesIO(resp.content))
+            sd.play(data, sr)
+            sd.wait()
+            res = f"???????? ??????? Silero ({speaker}): {clean_txt[:60]}"
+            _log_event("speak_johnny_voice", {"speaker": speaker, "len": len(clean_txt)}, res)
+            return res
+    except Exception as e:
+        _log_event("speak_johnny_voice_fallback", {"err": str(e)}, "??????? ?? SAPI")
+    res = _speak_offline_windows_sapi(clean_txt)
+    _log_event("speak_johnny_voice", {"speaker": "sapi_fallback"}, res)
+    return res
+
 
 def _speak_offline_windows_sapi(text: str) -> str:
     clean_txt = text.replace('"', ' ').replace("'", " ").replace("`", " ").strip()

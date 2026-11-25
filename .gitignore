@@ -13,3 +13,4 @@ backups/
 firmware-backup/
 xiaozhi-esp32/
 state.json
+vault.dpapi

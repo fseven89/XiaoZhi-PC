@@ -84,8 +84,61 @@ def notify_startup():
         pass
 
 
+try:
+    sys.path.insert(0, BASE_DIR)
+    import dpapi_vault as _dpapi_vault
+    _dpapi_vault.load_dpapi_into_environ()
+except Exception:
+    pass
+
+
+def start_background_ota_server():
+    """????????? ?????????? ????????? HTTP-?????? OTA ?? ????? 8090 ? ???????????? ? logs/ota_server.log."""
+    import threading, http.server, socketserver
+    bin_dir = os.path.join(BASE_DIR, "xiaozhi-esp32", "build")
+    ota_log = os.path.join(BASE_DIR, "logs", "ota_server.log")
+
+    class QuietOTAHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=bin_dir, **kwargs)
+        def do_GET(self):
+            if self.path != "/xiaozhi.bin":
+                self.send_error(403, "Only xiaozhi.bin allowed")
+                return
+            super().do_GET()
+        def log_message(self, fmt, *args):
+            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                with open(ota_log, "a", encoding="utf-8") as lf:
+                    lf.write(f"[{ts}] {self.client_address[0]} - {fmt % args}\n")
+            except Exception:
+                pass
+
+    class ReusableServer(socketserver.ThreadingTCPServer):
+        allow_reuse_address = True
+
+    def _run():
+        try:
+            srv = ReusableServer(("0.0.0.0", 8090), QuietOTAHandler)
+            srv.serve_forever()
+        except Exception as e:
+            try:
+                with open(ota_log, "a", encoding="utf-8") as lf:
+                    lf.write(f"[ERR] OTA server bind failed: {e}\n")
+            except Exception:
+                pass
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+
 def main():
     ensure_ollama_running()
+    start_background_ota_server()
+    try:
+        subprocess.Popen(['docker', 'start', 'xiaozhi-silero-tts'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x08000000)
+    except Exception:
+        pass
     notify_startup()
     proc_pipe = None
     proc_serial = None

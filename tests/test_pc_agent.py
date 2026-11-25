@@ -28,17 +28,26 @@ def test_workspace_file_cycle():
 def test_phone_send_document_cyrillic_filename(monkeypatch):
     import pc_agent
     captured = {}
-
     class DummyResp:
         ok = True
         status_code = 200
-
-    def fake_put(url, data, headers, timeout):
-        captured["headers"] = headers
+        text = '{"ok": true}'
+        def json(self): return {"ok": True}
+    def fake_post(url, data=None, files=None, json=None, timeout=15):
+        captured['files'] = files
         return DummyResp()
-
-    monkeypatch.setenv("PHONE_NTFY_TOPIC", "test_topic_123")
-    monkeypatch.setattr(pc_agent.requests, "put", fake_put)
-    res = pc_agent.phone_send_document("Отчёт_Джонни.md", "Привет мир")
-    assert "успешно отправлен" in res
-    captured["headers"]["Filename"].encode("latin-1")
+    def fake_put(url, data, headers, timeout):
+        captured['ntfy_headers'] = headers
+        return DummyResp()
+    monkeypatch.setenv('TELEGRAM_BOT_TOKEN', '123:TEST')
+    monkeypatch.setenv('TELEGRAM_ALLOWED_USER_ID', '99999')
+    monkeypatch.setattr(pc_agent.requests, 'post', fake_post)
+    res_tg = pc_agent.phone_send_document('Отчёт_Джонни.md', 'Привет мир')
+    assert 'отправлен в Telegram' in res_tg
+    assert captured['files']['document'][0] == 'Отчёт_Джонни.md'
+    monkeypatch.delenv('TELEGRAM_BOT_TOKEN', raising=False)
+    monkeypatch.setenv('PHONE_NTFY_TOPIC', 'test_topic_123')
+    monkeypatch.setattr(pc_agent.requests, 'put', fake_put)
+    res_ntfy = pc_agent.phone_send_document('Отчёт_Джонни.md', 'Привет мир')
+    assert 'отправлен через резерв ntfy' in res_ntfy
+    assert captured['ntfy_headers']['Filename'] == 'Otchyot_Dzhonni.md'

@@ -30,13 +30,69 @@ def _encode_rfc2047(text: str) -> str:
     b64 = _b64.b64encode(text.encode("utf-8")).decode("ascii")
     return f"=?utf-8?b?{b64}?="
 
+
+def _get_telegram_config() -> tuple[str, str, str]:
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    api_base = os.getenv("TELEGRAM_API_BASE", "https://telegram.org").strip().rstrip("/")
+    chat_id = os.getenv("TELEGRAM_ALLOWED_USER_ID", "").strip()
+    if not chat_id:
+        owner_file = os.path.join(LOGS_DIR, "tg_owner_id.txt")
+        if os.path.exists(owner_file):
+            try:
+                chat_id = open(owner_file, "r", encoding="utf-8").read().strip()
+            except Exception:
+                pass
+    return token, api_base, chat_id
+
+def _send_via_telegram_text(text: str, screenshot_path: str = "") -> tuple[bool, str]:
+    token, api_base, chat_id = _get_telegram_config()
+    if not token or not chat_id:
+        return False, "Telegram не настроен (нет токена или chat_id)"
+    try:
+        if screenshot_path and os.path.exists(screenshot_path):
+            with open(screenshot_path, "rb") as img:
+                r = requests.post(
+                    f"{api_base}/bot{token}/sendPhoto",
+                    data={"chat_id": chat_id, "caption": text[:1000]},
+                    files={"photo": ("screen.png", img, "image/png")},
+                    timeout=25
+                )
+        else:
+            r = requests.post(
+                f"{api_base}/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": text[:4000]},
+                timeout=15
+            )
+        if r.ok and r.json().get("ok"):
+            return True, "Успешно отправлено в Telegram"
+        return False, f"Telegram HTTP {r.status_code}: {r.text[:120]}"
+    except Exception as e:
+        return False, f"Сбой Telegram: {str(e)}"
+
+def _send_via_telegram_doc(filename: str, content: str, caption: str) -> tuple[bool, str]:
+    token, api_base, chat_id = _get_telegram_config()
+    if not token or not chat_id:
+        return False, "Telegram не настроен"
+    try:
+        r = requests.post(
+            f"{api_base}/bot{token}/sendDocument",
+            data={"chat_id": chat_id, "caption": caption[:1000]},
+            files={"document": (filename, content.encode("utf-8"), "text/plain; charset=utf-8")},
+            timeout=25
+        )
+        if r.ok and r.json().get("ok"):
+            return True, f"Файл '{filename}' отправлен в Telegram."
+        return False, f"Telegram Doc HTTP {r.status_code}: {r.text[:120]}"
+    except Exception as e:
+        return False, f"Сбой Telegram Doc: {str(e)}"
+
 def _transliterate_filename(name: str) -> str:
     ru_map = {
-        "?": "a", "?": "b", "?": "v", "?": "g", "?": "d", "?": "e", "?": "yo",
-        "?": "zh", "?": "z", "?": "i", "?": "y", "?": "k", "?": "l", "?": "m",
-        "?": "n", "?": "o", "?": "p", "?": "r", "?": "s", "?": "t", "?": "u",
-        "?": "f", "?": "kh", "?": "ts", "?": "ch", "?": "sh", "?": "shch",
-        "?": "", "?": "y", "?": "", "?": "e", "?": "yu", "?": "ya"
+        "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "yo",
+        "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+        "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+        "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+        "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya"
     }
     out = []
     for ch in name:
@@ -278,32 +334,56 @@ def search_workspace_docs(query: str) -> str:
     return res
 
 @mcp.tool()
+def phone_send_telegram(message: str, attach_screenshot: bool = False) -> str:
+    """Отправляет текст или скриншот экрана ПК на телефон в Telegram (с авто-резервом на ntfy.sh)."""
+    return phone_send_ntfy(message=message, attach_screenshot=attach_screenshot)
+
+@mcp.tool()
 def phone_send_ntfy(message: str, attach_screenshot: bool = False) -> str:
-    """Р В РЎвЂєР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™ Р РЋРІР‚С™Р В Р’ВµР В РЎвЂќР РЋР С“Р РЋРІР‚С™ Р В РЎвЂР В Р’В»Р В РЎвЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР В РЎвЂР В Р вЂ¦Р РЋРІвЂљВ¬Р В РЎвЂўР РЋРІР‚С™ Р РЋР РЉР В РЎвЂќР РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’В° Р В РЎСџР В РЎв„ў Р В Р вЂ¦Р В Р’В° Р РЋРІР‚С™Р В Р’ВµР В Р’В»Р В Р’ВµР РЋРІР‚С›Р В РЎвЂўР В Р вЂ¦ Р РЋРІР‚РЋР В Р’ВµР РЋР вЂљР В Р’ВµР В Р’В· ntfy.sh."""
+    """Отправляет текст или скриншот экрана ПК на телефон (основной канал: Telegram, резерв: ntfy.sh)."""
     dlp_ok, dlp_msg = _REDLINE.analyze_outbound_text(message)
     if not dlp_ok:
-        _log_event("phone_send_ntfy_DLP_BLOCK", {}, dlp_msg)
+        _log_event("phone_send_DLP_BLOCK", {}, dlp_msg)
         return dlp_msg
-    topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
-    if not topic:
-        return "Р В РЎв„ўР В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В» ntfy Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В Р’ВµР В Р вЂ¦ Р В Р вЂ  .env."
-    ntfy_url = "https://" + "ntfy.sh" + f"/{topic}"
+
+    tmp_path = ""
+    if attach_screenshot:
+        with mss.mss() as sct:
+            tmp_path = os.path.join(tempfile.gettempdir(), "xiaozhi_screen.png")
+            sct.shot(output=tmp_path)
+
     try:
-        if attach_screenshot:
-            with mss.mss() as sct:
-                tmp_path = os.path.join(tempfile.gettempdir(), "xiaozhi_screen.png")
-                sct.shot(output=tmp_path)
+        # 1. Основной канал: Telegram (через Cloudflare Worker)
+        tg_ok, tg_res = _send_via_telegram_text(message, tmp_path)
+        if tg_ok:
+            _log_event("phone_send_telegram", {"message": message[:80], "screenshot": attach_screenshot}, tg_res)
+            return tg_res
+
+        # 2. Резервный канал: ntfy.sh
+        topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
+        if not topic:
+            res = f"{tg_res} (резерв ntfy не настроен)"
+            _log_event("phone_send_failed", {"tg_err": tg_res}, res)
+            return res
+
+        ntfy_url = "https://" + "ntfy.sh" + f"/{topic}"
+        if attach_screenshot and tmp_path:
             with open(tmp_path, "rb") as img:
                 safe_msg = message.encode("latin-1", "ignore").decode("latin-1") or "Screenshot"
                 resp = requests.put(ntfy_url, data=img, headers={"Filename": "screen.png", "Title": "Johnny PC Screen", "Message": safe_msg}, timeout=15)
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
         else:
             resp = requests.post(ntfy_url, data=message.encode("utf-8"), headers={"Title": "Johnny PC"}, timeout=10)
-        res = "Р В Р в‚¬Р РЋР С“Р В РЎвЂ”Р В Р’ВµР РЋРІвЂљВ¬Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂ”Р РЋР вЂљР В Р’В°Р В Р вЂ Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂў Р В Р вЂ¦Р В Р’В° Р РЋРІР‚С™Р В Р’ВµР В Р’В»Р В Р’ВµР РЋРІР‚С›Р В РЎвЂўР В Р вЂ¦ Р РЋРІР‚РЋР В Р’ВµР РЋР вЂљР В Р’ВµР В Р’В· ntfy." if resp.ok else f"Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° ntfy: {resp.status_code}"
+        res = f"Отправлено через резерв ntfy (Telegram недоступен: {tg_res[:60]})" if resp.ok else f"Ошибка обоих каналов (TG: {tg_res[:50]} | ntfy: {resp.status_code})"
     except Exception as e:
-        res = f"Р В Р Р‹Р В Р’В±Р В РЎвЂўР В РІвЂћвЂ“ ntfy: {str(e)}"
-    _log_event("phone_send_ntfy", {"message": message, "screenshot": attach_screenshot}, res)
+        res = f"Сбой отправки на телефон: {str(e)}"
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
+    _log_event("phone_send_ntfy_fallback", {"message": message[:80], "screenshot": attach_screenshot}, res)
     return res
 
 @mcp.tool()
@@ -556,7 +636,7 @@ def _gather_live_project_context() -> str:
     if os.path.exists(live_log):
         with open(live_log, "r", encoding="utf-8", errors="ignore") as lf:
             tail = lf.readlines()[-25:]
-            parts.append("=== ????? ??? ESP32-S3 (esp32_live.log) ===" + nl + "".join(tail))
+            parts.append("=== ЖИВОЙ ЛОГ ESP32-S3 (esp32_live.log) ===" + nl + "".join(tail))
     return (nl + nl).join(parts)
 
 
@@ -596,15 +676,24 @@ def delegate_deep_task(goal: str, output_filename: str = "report.md", send_to_ph
 
 @mcp.tool()
 def phone_send_document(filename: str, content: str, caption: str = "Файл от Джонни") -> str:
-    """Создает файл (текст, код, список, отчет) и отправляет его прямо на телефон пользователя через ntfy."""
-    topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
-    if not topic:
-        return "Канал ntfy не настроен в .env."
+    """Создает файл (текст, код, отчет) и отправляет на телефон в Telegram (резерв: ntfy.sh)."""
     dlp_ok, dlp_msg = _REDLINE.analyze_outbound_text(content)
     if not dlp_ok:
         _log_event("phone_send_document_DLP_BLOCK", {"filename": filename}, dlp_msg)
         return dlp_msg
+
     safe_name = os.path.basename(filename) or "note.txt"
+
+    # 1. Основной канал: Telegram
+    tg_ok, tg_res = _send_via_telegram_doc(safe_name, content, caption)
+    if tg_ok:
+        _log_event("phone_send_document_tg", {"filename": safe_name, "bytes": len(content)}, tg_res)
+        return tg_res
+
+    # 2. Резервный канал: ntfy.sh
+    topic = os.getenv("PHONE_NTFY_TOPIC", "").strip()
+    if not topic:
+        return f"Ошибка Telegram ({tg_res}), резерв ntfy не настроен."
     from urllib.parse import quote
     ntfy_url = "https://" + "ntfy.sh" + f"/{topic}?message={quote(caption)}"
     try:
@@ -618,10 +707,10 @@ def phone_send_document(filename: str, content: str, caption: str = "Файл о
             },
             timeout=15
         )
-        res = f"Файл '{safe_name}' успешно отправлен на телефон." if resp.ok else f"Ошибка ntfy: {resp.status_code}"
+        res = f"Файл '{safe_name}' отправлен через резерв ntfy." if resp.ok else f"Ошибка ntfy: {resp.status_code}"
     except Exception as e:
         res = f"Сбой отправки файла: {str(e)}"
-    _log_event("phone_send_document", {"filename": safe_name, "bytes": len(content)}, res)
+    _log_event("phone_send_document_fallback", {"filename": safe_name, "bytes": len(content)}, res)
     return res
 
 
@@ -835,42 +924,42 @@ def check_laptop_power_eco(threshold_percent: int = 25) -> str:
 
 @mcp.tool()
 def run_full_system_audit(send_to_phone: bool = True) -> str:
-    """????????? ?????? ????????? ????? ???? ?????? ??????? XiaoZhi-PC (v4.1) ? ???????? ESP32-S3, ?????????? ??? ??????????????? ???????????, ????????? Ollama vs DeepSeek ? ???????? ???????? ???? ????????????."""
+    """Выполняет полный системный аудит всех узлов проекта XiaoZhi-PC (v4.1) и терминала ESP32-S3, формирует срез телеметрии, сравнивает Ollama vs DeepSeek и отправляет итоговый отчёт пользователю."""
     nl = chr(10)
     reflection = run_self_reflection()
     telemetry_bundle = (nl + nl).join([
-        "=== 1. ????????????? ? ????? ===" + nl + reflection,
-        "=== 2. ????????????? ??????? ===" + nl + get_full_analytics_dashboard(send_to_phone=False),
-        "=== 3. ?????????? ?? ? ??????? ===" + nl + get_pc_telemetry() + nl + check_laptop_power_eco(),
-        "=== 4. ?????? ?????????????? ??-???? ===" + nl + get_it_sbge_status(),
-        "=== 5. DOCKER-?????????? ===" + nl + manage_docker("ps"),
-        "=== 6. ????? ???? ????? ESP32-S3 (COM6) ===" + nl + read_esp32_live_logs(80),
-        "=== 7. ?????? ???????? ?????? ===" + nl + get_johnny_audit_log(25),
-        "=== 8. ????? ??? (HOME ASSISTANT) ===" + nl + ha_list_devices()
+        "=== 1. САМООБУЧЕНИЕ И УРОКИ ===" + nl + reflection,
+        "=== 2. АНАЛИТИЧЕСКИЙ ДАШБОРД ===" + nl + get_full_analytics_dashboard(send_to_phone=False),
+        "=== 3. ТЕЛЕМЕТРИЯ ПК И БАТАРЕЯ ===" + nl + get_pc_telemetry() + nl + check_laptop_power_eco(),
+        "=== 4. КОНТУР ГАРАНТИРОВАННОГО ПИТАНИЯ ИТ-СБГЭ ===" + nl + get_it_sbge_status(),
+        "=== 5. DOCKER-КОНТЕЙНЕРЫ ===" + nl + manage_docker("ps"),
+        "=== 6. ЖИВОЙ ЛОГ ПЛАТЫ ESP32-S3 (COM6) ===" + nl + read_esp32_live_logs(80),
+        "=== 7. ЖУРНАЛ ДЕЙСТВИЙ ДЖОННИ ===" + nl + get_johnny_audit_log(25),
+        "=== 8. УМНЫЙ ДОМ (HOME ASSISTANT) ===" + nl + ha_list_devices()
     ])
     write_workspace_file("live_telemetry_snapshot.txt", telemetry_bundle)
 
     goal = (
-        "?? ?????? ???????? ??????, ??????????? v4.1 ? ??????? ????? ???? 8 ????????? "
-        "??????? ?????? ??????????? ????? ??????? XiaoZhi-PC ? ???????? ESP32-S3: "
-        "1) ??????????? ?????? SRAM/PSRAM ? ????????????????? ?????; "
-        "2) ???????????? Docker-????????, OTA (:8090), Silero TTS (:8010) ? Ollama (:11434); "
-        "3) ???????????? (DPAPI Vault, RedLineGuard) ? ?????????? ? Home Assistant; "
-        "4) ?????????? ????????? ???? ???????????? ?? ?????? v4.2."
+        "Ты — строгий технический эксперт проекта XiaoZhi-PC (v4.1). На основе свежего среза из 8 контуров "
+        "сделай глубокий технический аудит состояния сервера XiaoZhi-PC и терминала ESP32-S3: "
+        "1) стабильность памяти SRAM/PSRAM и беспроводной связи; "
+        "2) работоспособность Docker-сервисов, OTA (:8090), Silero TTS (:8010) и Ollama (:11434); "
+        "3) безопасность (DPAPI Vault, RedLineGuard) и интеграции с Home Assistant; "
+        "4) конкретные приоритетные шаги модернизации для версии v4.2."
     )
     cmp_res = compare_ai_brains(goal, send_to_phone=False)
     deep_res = delegate_deep_task(goal, output_filename="full_system_audit_v41.md", send_to_phone=send_to_phone)
-    res = f"?????? ??????????? ????? ????????.{nl}- ???? 8 ?????????: workspace/live_telemetry_snapshot.txt{nl}- {cmp_res}{nl}- {deep_res}"
+    res = f"Полный системный аудит завершён.{nl}- Срез 8 контуров: workspace/live_telemetry_snapshot.txt{nl}- {cmp_res}{nl}- {deep_res}"
     _log_event("run_full_system_audit", {"send_to_phone": send_to_phone}, res)
     return res
 
 
 @mcp.tool()
 def speak_johnny_voice(text: str, speaker: str = "eugene") -> str:
-    """?????????? ????? ????????? ????? ??????? Silero TTS v4_ru (eugene/aidar) ????? ???????? ?? ? ???????? ?? Windows SAPI."""
+    """Озвучивает текст фирменным локальным голосом Silero TTS v4_ru (eugene/aidar) через динамики ПК с резервом на Windows SAPI."""
     clean_txt = text.strip()
     if not clean_txt:
-        return "?????? ????? ??? ???????."
+        return "Пустой текст для озвучки."
     try:
         import io, sounddevice as sd, scipy.io.wavfile as wavfile
         resp = requests.post(
@@ -882,11 +971,11 @@ def speak_johnny_voice(text: str, speaker: str = "eugene") -> str:
             sr, data = wavfile.read(io.BytesIO(resp.content))
             sd.play(data, sr)
             sd.wait()
-            res = f"???????? ??????? Silero ({speaker}): {clean_txt[:60]}"
+            res = f"Озвучено голосом Silero ({speaker}): {clean_txt[:60]}"
             _log_event("speak_johnny_voice", {"speaker": speaker, "len": len(clean_txt)}, res)
             return res
     except Exception as e:
-        _log_event("speak_johnny_voice_fallback", {"err": str(e)}, "??????? ?? SAPI")
+        _log_event("speak_johnny_voice_fallback", {"err": str(e)}, "Переход на SAPI")
     res = _speak_offline_windows_sapi(clean_txt)
     _log_event("speak_johnny_voice", {"speaker": "sapi_fallback"}, res)
     return res
